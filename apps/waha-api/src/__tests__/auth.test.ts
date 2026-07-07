@@ -15,7 +15,7 @@ vi.mock("../db.js", () => {
     id: "usr_admin_default",
     name: "Resham Sutra Admin",
     email: "admin@reshamsutra.com",
-    password_hash: "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", // Correct SHA-256 hash of 'admin123'
+    password_hash: "$2b$10$5jhdPgWK9jUPI9Zyp.fKSuxuydwwEKamM0ywPRR4OcuzsbGzerYyS", // Bcrypt hash of 'admin123'
     role: "ADMIN",
     default_persona: "CRM",
     created_at: new Date(),
@@ -54,12 +54,12 @@ import { hashPassword, verifyPassword } from "../auth.js";
 
 describe("Authentication Services & Routes integration tests", () => {
   describe("Password Hashing Functions", () => {
-    it("successfully hashes and verifies passwords using timing-safe comparisons", () => {
+    it("successfully hashes and verifies passwords using timing-safe comparisons", async () => {
       const password = "mySecurePassword123";
-      const hash = hashPassword(password);
+      const hash = await hashPassword(password);
       
-      expect(verifyPassword(password, hash)).toBe(true);
-      expect(verifyPassword("differentPassword", hash)).toBe(false);
+      expect(await verifyPassword(password, hash)).toBe(true);
+      expect(await verifyPassword("differentPassword", hash)).toBe(false);
     });
   });
 

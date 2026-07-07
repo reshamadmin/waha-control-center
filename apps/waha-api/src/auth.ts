@@ -1,9 +1,10 @@
 import jwt from "jsonwebtoken";
-import { createHash, timingSafeEqual } from "node:crypto";
+import bcryptjs from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
 import { env } from "./config.js";
 import { UserRepository } from "./repositories/UserRepository.js";
 import { UserRole, Persona } from "./models/User.js";
+import { logger } from "./logger.js";
 
 const userRepository = new UserRepository();
 
@@ -15,7 +16,6 @@ export interface JwtPayload {
   defaultPersona: Persona;
 }
 
-// Cookie setting parameters
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: env.PUBLIC_WEB_ORIGIN.startsWith("https://"),
@@ -24,20 +24,12 @@ const COOKIE_OPTIONS = {
   maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
 };
 
-export function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
+export async function hashPassword(password: string): Promise<string> {
+  return bcryptjs.hash(password, 10);
 }
 
-export function verifyPassword(password: string, hash: string): boolean {
-  const inputHash = hashPassword(password);
-  const inputBuffer = Buffer.from(inputHash, "utf8");
-  const targetBuffer = Buffer.from(hash, "utf8");
-
-  if (inputBuffer.length !== targetBuffer.length) {
-    return false;
-  }
-
-  return timingSafeEqual(inputBuffer, targetBuffer);
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcryptjs.compare(password, hash);
 }
 
 export function generateToken(payload: JwtPayload): string {
@@ -47,7 +39,8 @@ export function generateToken(payload: JwtPayload): string {
 export function verifyToken(token: string): JwtPayload | null {
   try {
     return jwt.verify(token, env.SESSION_SECRET) as JwtPayload;
-  } catch {
+  } catch (err: any) {
+    logger.debug({ error: err.message }, "Token verification failed");
     return null;
   }
 }
@@ -65,17 +58,14 @@ export function clearSessionCookie(res: Response): void {
   });
 }
 
-// Middleware: Extract user cookie from cookies or Auth Bearer header
 export function getAuthenticatedUser(req: Request): JwtPayload | null {
   let token = null;
 
-  // Extract from Cookie
   const cookies = parseCookies(req.headers.cookie);
   if (cookies[env.SESSION_COOKIE_NAME]) {
     token = cookies[env.SESSION_COOKIE_NAME];
   }
 
-  // Fallback: Authorization header (for APIs/n8n triggers)
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
     token = authHeader.substring(7);
@@ -92,6 +82,7 @@ export async function requireAuth(
 ): Promise<void> {
   const jwtUser = getAuthenticatedUser(req);
   if (!jwtUser) {
+    logger.warn("Authentication failed: session token is missing or invalid");
     res.status(401).json({
       status: "error",
       code: "UNAUTHORIZED",
@@ -100,9 +91,9 @@ export async function requireAuth(
     return;
   }
 
-  // Lookup in DB to verify user still exists and role hasn't changed
   const dbUser = await userRepository.findById(jwtUser.sub);
   if (!dbUser) {
+    logger.warn({ userId: jwtUser.sub }, "Authentication failed: user no longer exists in database");
     res.status(401).json({
       status: "error",
       code: "UNAUTHORIZED",

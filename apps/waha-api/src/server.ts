@@ -5,6 +5,7 @@ import cors from "cors";
 import { env } from "./config.js";
 import { checkDatabaseConnection, runMigrations } from "./db.js";
 import { authRouter } from "./routes/authRoutes.js";
+import { logger } from "./logger.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -57,16 +58,16 @@ app.get("/", (req, res) => {
 
 // Socket connection handler
 io.on("connection", (socket) => {
-  console.log(`🔌 Client connected: ${socket.id}`);
+  logger.info({ socketId: socket.id }, "🔌 Client connected to Socket.IO");
 
   socket.on("disconnect", () => {
-    console.log(`🔌 Client disconnected: ${socket.id}`);
+    logger.info({ socketId: socket.id }, "🔌 Client disconnected from Socket.IO");
   });
 });
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error("❌ Unhandled Error:", err);
+  logger.error({ error: err.message, stack: err.stack }, "❌ Unhandled Server Error");
   res.status(err.statusCode || 500).json({
     status: "error",
     code: err.code || "INTERNAL_SERVER_ERROR",
@@ -79,18 +80,17 @@ const PORT = env.PORT;
 
 async function startServer() {
   try {
-    // Run SQL database migrations
     if (process.env.NODE_ENV !== "test") {
-      console.log("⚙️ Initializing database migrations check...");
+      logger.info("⚙️ Initializing database migrations check...");
       await runMigrations();
-      console.log("✅ Database migration checking completed.");
+      logger.info("✅ Database migration checking completed.");
     }
   } catch (err) {
-    console.error("⚠️ Failed to apply migrations during startup, proceeding with boot:", err);
+    logger.error({ error: err }, "⚠️ Failed to apply migrations during startup, proceeding with boot");
   }
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 WAHA Control Center Backend running at http://localhost:${PORT}`);
+    logger.info({ port: PORT }, "🚀 WAHA Control Center Backend running");
   });
 }
 

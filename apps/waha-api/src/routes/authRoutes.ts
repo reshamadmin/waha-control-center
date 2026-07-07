@@ -33,7 +33,7 @@ router.post("/login", async (req, res, next) => {
     const { email, password } = parsed.data;
     const user = await userRepository.findByEmail(email);
 
-    if (!user || !verifyPassword(password, user.passwordHash)) {
+    if (!user || !(await verifyPassword(password, user.passwordHash))) {
       res.status(401).json({
         status: "error",
         code: "UNAUTHORIZED",

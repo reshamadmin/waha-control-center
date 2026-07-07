@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { env } from "./config.js";
+import { logger } from "./logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,23 +45,29 @@ export async function runMigrations(): Promise<void> {
     const [rows] = await connection.execute<any[]>("SELECT version FROM schema_migrations");
     const executed = new Set(rows.map((r) => r.version));
 
-    // 4. Execute pending migrations
+    // 4. Execute pending migrations atomically
     for (const file of sqlFiles) {
       if (executed.has(file)) continue;
 
-      console.log(`⚙️ Running migration: ${file}`);
+      logger.info({ file }, "⚙️ Starting atomic migration execution");
       const filePath = path.join(migrationsDir, file);
       const sql = await fs.readFile(filePath, "utf8");
 
-      // Execute SQL content
-      await connection.query(sql);
-
-      // Record migration success
-      await connection.execute("INSERT INTO schema_migrations (version) VALUES (?)", [file]);
-      console.log(`✅ Migration successful: ${file}`);
+      // Wrap in atomic database transaction
+      await connection.beginTransaction();
+      try {
+        await connection.query(sql);
+        await connection.execute("INSERT INTO schema_migrations (version) VALUES (?)", [file]);
+        await connection.commit();
+        logger.info({ file }, "✅ Migration committed successfully");
+      } catch (err) {
+        await connection.rollback();
+        logger.error({ file, error: err }, "❌ Migration failed, transaction rolled back");
+        throw err;
+      }
     }
   } catch (err) {
-    console.error("❌ Migration runner error:", err);
+    logger.error({ error: err }, "❌ Migration runner encountered a fatal error");
     throw err;
   } finally {
     connection.release();
