@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0-sprint3] - 2026-07-07
+### Added
+- Created database migration `011_seed_credentials.sql` to seed the default WAHA credentials mapped to the admin user.
+- Implemented `WahaService` inside backend connecting to the WAHA container REST API, retrieving active sessions, executing starts/stops, fetching QR code strings, and syncing statuses into the MySQL database.
+- Implemented backend routing for session control in `settingsRoutes.ts` with strict role authorizations (checking for `ADMIN` permission gates on restarts and disconnects).
+- Registered settings and connection console endpoints in Express API routing structure.
+- Documented session connection endpoints in `api_contract.yaml` immediately upon implementation.
+- Built frontend Settings and Connection Console UI in `WahaSettings.tsx` displaying status panels (Connected, Disconnected, QR Scan needed).
+- Integrated automatic 5-second connection status polling loops.
+- Embedded a QR code linking canvas using a public QR code server rendering API.
+- Verified that all 15 backend integration tests compile and pass cleanly under Vitest.
+
 ## [1.0.0-sprint2] - 2026-07-07
 ### Added
 - Database DDL SQL schemas configured as migrations under `/migrations` (001 to 010).

@@ -5,6 +5,7 @@ import cors from "cors";
 import { env } from "./config.js";
 import { checkDatabaseConnection, runMigrations } from "./db.js";
 import { authRouter } from "./routes/authRoutes.js";
+import { settingsRouter } from "./routes/settingsRoutes.js";
 import { logger } from "./logger.js";
 
 const app = express();
@@ -27,6 +28,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRouter);
+app.use("/api/settings", settingsRouter);
 
 // Health check endpoint
 app.get("/health", async (req, res) => {

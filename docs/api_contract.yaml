@@ -471,6 +471,107 @@ paths:
         '502':
           description: WAHA instance unreachable or connection error.
 
+  /settings/whatsapp/status:
+    get:
+      summary: Get WhatsApp Session Status
+      description: Checks connection status of the WAHA engine and updates MySQL database state.
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Connection status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  session:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: default
+                      status:
+                        type: string
+                        example: SCAN_QR
+
+  /settings/whatsapp/disconnect:
+    post:
+      summary: Disconnect WhatsApp Session
+      description: Stops the active WhatsApp session in WAHA and updates MySQL status. Restricted to ADMIN.
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Disconnected successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: WhatsApp session 'default' disconnected.
+        '403':
+          description: Forbidden. User lacks admin credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  code:
+                    type: string
+                    example: FORBIDDEN
+                  message:
+                    type: string
+                    example: Only administrators can modify WhatsApp connections.
+
+  /settings/whatsapp/restart:
+    post:
+      summary: Restart WhatsApp Session
+      description: Disconnects and restarts the WhatsApp session in WAHA and updates status. Restricted to ADMIN.
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Restarted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: WhatsApp session 'default' restarted.
+        '403':
+          description: Forbidden. User lacks admin credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  code:
+                    type: string
+                    example: FORBIDDEN
+                  message:
+                    type: string
+                    example: Only administrators can modify WhatsApp connections.
+
   /settings/system-info:
     get:
       summary: Get Server Health and System Information
