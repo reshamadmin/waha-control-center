@@ -80,6 +80,44 @@ paths:
                     type: string
                     example: success
 
+  /auth/me:
+    get:
+      summary: Get Current Session Profile
+      description: Returns details of the logged in user based on the active session cookie.
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: User details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: usr_admin_default
+                      name:
+                        type: string
+                        example: Resham Sutra Admin
+                      email:
+                        type: string
+                        example: admin@reshamsutra.com
+                      role:
+                        type: string
+                        example: ADMIN
+                      defaultPersona:
+                        type: string
+                        example: CRM
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
   /whatsapp/chats:
     get:
       summary: Get Active Chats

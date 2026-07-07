@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS `webhook_events` (
+  `id` VARCHAR(36) PRIMARY KEY,
+  `session_name` VARCHAR(100) NOT NULL,
+  `event_type` VARCHAR(100) NOT NULL,
+  `payload` JSON NOT NULL,
+  `processed` TINYINT(1) NOT NULL DEFAULT 0,
+  `error` TEXT NULL DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

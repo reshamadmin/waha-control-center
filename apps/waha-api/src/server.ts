@@ -3,7 +3,8 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 import cors from "cors";
 import { env } from "./config.js";
-import { pool, checkDatabaseConnection } from "./db.js";
+import { checkDatabaseConnection, runMigrations } from "./db.js";
+import { authRouter } from "./routes/authRoutes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -22,6 +23,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Routes
+app.use("/api/auth", authRouter);
 
 // Health check endpoint
 app.get("/health", async (req, res) => {
@@ -46,7 +50,7 @@ app.get("/health", async (req, res) => {
   });
 });
 
-// Basic route
+// Basic identity route
 app.get("/", (req, res) => {
   res.json({ message: "Resham Sutra WAHA Control Center API V1" });
 });
@@ -63,17 +67,36 @@ io.on("connection", (socket) => {
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("❌ Unhandled Error:", err);
-  res.status(500).json({
+  res.status(err.statusCode || 500).json({
     status: "error",
-    code: "INTERNAL_SERVER_ERROR",
+    code: err.code || "INTERNAL_SERVER_ERROR",
     message: err.message || "Something went wrong on the server."
   });
 });
 
-// Start the server
+// Start the server with dynamic DB migration checks
 const PORT = env.PORT;
-httpServer.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 WAHA Control Center Backend running at http://localhost:${PORT}`);
-});
+
+async function startServer() {
+  try {
+    // Run SQL database migrations
+    if (process.env.NODE_ENV !== "test") {
+      console.log("⚙️ Initializing database migrations check...");
+      await runMigrations();
+      console.log("✅ Database migration checking completed.");
+    }
+  } catch (err) {
+    console.error("⚠️ Failed to apply migrations during startup, proceeding with boot:", err);
+  }
+
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 WAHA Control Center Backend running at http://localhost:${PORT}`);
+  });
+}
+
+// Automatically start if not loaded under tests
+if (process.env.NODE_ENV !== "test") {
+  startServer();
+}
 
 export { app, httpServer, io };
