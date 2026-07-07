@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  database:
+    image: mysql:8.0
+    container_name: waha_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: waha_control_center
+      MYSQL_USER: waha_admin
+      MYSQL_PASSWORD: ${DB_USER_PASSWORD:-waha_user_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  waha:
+    image: devlikeapro/waha
+    container_name: waha_whatsapp
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      WAHA_API_KEY: ${WAHA_API_KEY:-waha_secret_api_key}
+      WHATSAPP_DEFAULT_ENGINE: NOWEB
+    volumes:
+      - waha_data:/app/.waha
+
+  backend:
+    build:
+      context: ./apps/waha-api
+      dockerfile: Dockerfile
+    container_name: waha_backend
+    restart: always
+    depends_on:
+      - database
+      - waha
+    ports:
+      - "3002:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: mysql://waha_admin:${DB_USER_PASSWORD:-waha_user_pass}@database:3306/waha_control_center
+      WAHA_BASE_URL: http://waha:3001
+      WAHA_API_KEY: ${WAHA_API_KEY:-waha_secret_api_key}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      PUBLIC_WEB_ORIGIN: http://localhost:3003
+
+  frontend:
+    build:
+      context: ./apps/waha-web
+      dockerfile: Dockerfile
+    container_name: waha_frontend
+    restart: always
+    ports:
+      - "3003:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  waha_data:

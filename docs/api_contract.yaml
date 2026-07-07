@@ -1,0 +1,683 @@
+openapi: 3.0.3
+info:
+  title: Resham Sutra WAHA Control Center API
+  description: Standalone API documentation for the Resham Sutra WAHA Control Center (WhatsApp Module V1).
+  version: 1.0.0
+servers:
+  - url: http://localhost:3002/api
+    description: Local development backend server
+paths:
+  /auth/login:
+    post:
+      summary: User Authentication
+      description: Logs in the user and sets an HttpOnly cookie containing the session JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: OBJECT
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@reshamsutra.com
+                password:
+                  type: string
+                  format: password
+                  example: securePassword123
+      responses:
+        '200':
+          description: Successfully authenticated. Session cookie issued.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: session_token=jwt_data; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: usr_781290
+                      name:
+                        type: string
+                        example: Jane Doe
+                      email:
+                        type: string
+                        example: user@reshamsutra.com
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/logout:
+    post:
+      summary: User Logout
+      description: Clears the session cookie.
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Logged out successfully. Cookie cleared.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+
+  /whatsapp/chats:
+    get:
+      summary: Get Active Chats
+      description: Retrieves a list of active chat sessions, sorted by latest message received.
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Active chats list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Chat'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /whatsapp/chats/{id}/messages:
+    get:
+      summary: Get Conversation Messages
+      description: Retrieves paginated message history for a specific chat.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Chat ID or WhatsApp JID (e.g. 919876543210@s.whatsapp.net)
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Items per page
+      responses:
+        '200':
+          description: List of messages with pagination metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  pagination:
+                    type: object
+                    properties:
+                      currentPage:
+                        type: integer
+                        example: 1
+                      hasNextPage:
+                        type: boolean
+                        example: false
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /whatsapp/send:
+    post:
+      summary: Send Manual Message
+      description: Dispatches a message to a recipient via WAHA and saves it in the database.
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - to
+                - text
+              properties:
+                to:
+                  type: string
+                  description: Phone number or JID
+                  example: "919876543210"
+                text:
+                  type: string
+                  description: Text message content
+                  example: "Hello, this is a message from Resham Sutra."
+      responses:
+        '200':
+          description: Message dispatched and logged successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /whatsapp/chats/{id}/link:
+    post:
+      summary: Link Chat to ERP Customer
+      description: Maps a WhatsApp chat session to a customer record.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Chat ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customerId
+              properties:
+                customerId:
+                  type: string
+                  format: uuid
+                  example: "88012abc-d1e2-3f4g-5h6i-7j8k9l0m1n2o"
+      responses:
+        '200':
+          description: Chat successfully linked.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Chat successfully linked."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /whatsapp/webhook/waha:
+    post:
+      summary: Ingest Webhook Event from WAHA
+      description: Endpoint for WAHA to deliver incoming messages and status updates.
+      security:
+        - WebhookSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - event
+                - session
+                - payload
+              properties:
+                event:
+                  type: string
+                  example: "message"
+                session:
+                  type: string
+                  example: "session_usr_781290"
+                payload:
+                  type: object
+                  description: Raw JSON payload from the WAHA engine.
+      responses:
+        '200':
+          description: Webhook ingested successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  duplicate:
+                    type: boolean
+                    example: false
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /broadcast:
+    post:
+      summary: Create Broadcast Campaign
+      description: Staging target items in database table queues.
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - targets
+                - messageType
+                - body
+              properties:
+                name:
+                  type: string
+                  example: "Monsoon Offer"
+                targets:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - phone
+                    properties:
+                      phone:
+                        type: string
+                        example: "919876543210"
+                      name:
+                        type: string
+                        example: "Rahul"
+                messageType:
+                  type: string
+                  enum: [text, image, document]
+                  example: "text"
+                body:
+                  type: string
+                  example: "Hi {{name}}, enjoy 10% off!"
+                mediaUrl:
+                  type: string
+                  nullable: true
+                  example: "http://example.com/file.pdf"
+      responses:
+        '201':
+          description: Campaign successfully created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  broadcastId:
+                    type: string
+                    example: "brd_55102"
+                  status:
+                    type: string
+                    example: "queued"
+                  totalTargets:
+                    type: integer
+                    example: 200
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /broadcast/{id}/control:
+    post:
+      summary: Control Active Broadcast Campaign
+      description: Pause, resume, or stop a queued campaign.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum: [pause, resume, stop]
+                  example: "pause"
+      responses:
+        '200':
+          description: Campaign state updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  broadcastId:
+                    type: string
+                    example: "brd_55102"
+                  currentStatus:
+                    type: string
+                    example: "paused"
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /settings:
+    get:
+      summary: Get User Configuration Settings
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Current user configuration settings payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+    put:
+      summary: Update Settings Config
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Settings'
+      responses:
+        '200':
+          description: Settings updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+
+  /settings/whatsapp/qr:
+    get:
+      summary: Get Session QR Code
+      description: Requests WAHA session engine to output active QR code link if disconnected.
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Active status QR code.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "SCAN_QR"
+                  qrCode:
+                    type: string
+                    description: Base64 or Text QR output payload
+                    example: "2@abc123xyz..."
+        '502':
+          description: WAHA instance unreachable or connection error.
+
+  /settings/system-info:
+    get:
+      summary: Get Server Health and System Information
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: System specifications payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uptime:
+                    type: string
+                    example: "2 days, 4 hours"
+                  wahaVersion:
+                    type: string
+                    example: "1.12.3"
+                  engine:
+                    type: string
+                    example: "NOWEB"
+                  buildVersion:
+                    type: string
+                    example: "v1.0.0-release"
+
+  /settings/audit-logs:
+    get:
+      summary: Fetch System Audit Log Trail
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated audit logs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "log_99102"
+                        action:
+                          type: string
+                          example: "LOGIN"
+                        details:
+                          type: string
+                          example: "User logged in from IP 192.168.1.1"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2026-07-07T05:00:00Z"
+                  totalCount:
+                    type: integer
+                    example: 145
+
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: session_token
+      description: JWT authentication token set on login.
+    WebhookSecretAuth:
+      type: http
+      scheme: bearer
+      description: Secret Bearer token configured for verification.
+
+  schemas:
+    Chat:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "cht_102941"
+        userId:
+          type: string
+          example: "usr_781290"
+        customerId:
+          type: string
+          nullable: true
+          example: "cust_88012"
+        wahaChatId:
+          type: string
+          example: "919876543210@s.whatsapp.net"
+        contactPhone:
+          type: string
+          example: "919876543210"
+        contactName:
+          type: string
+          example: "Rahul Kumar"
+        lastMessageAt:
+          type: string
+          format: date-time
+          example: "2026-07-07T05:00:00Z"
+        lastMessagePreview:
+          type: string
+          example: "I need info on the silk reeling machine."
+        unreadCount:
+          type: integer
+          example: 2
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "msg_90124"
+        chatId:
+          type: string
+          example: "cht_102941"
+        userId:
+          type: string
+          example: "usr_781290"
+        direction:
+          type: string
+          enum: [inbound, outbound]
+          example: "inbound"
+        wahaMessageId:
+          type: string
+          example: "msg_waha_8829103"
+        messageType:
+          type: string
+          example: "text"
+        body:
+          type: string
+          example: "I need info on the silk reeling machine."
+        mediaUrl:
+          type: string
+          nullable: true
+          example: null
+        status:
+          type: string
+          enum: [sending, sent, delivered, read, failed]
+          example: "read"
+        sentAt:
+          type: string
+          format: date-time
+          example: "2026-07-07T05:00:00Z"
+
+    Settings:
+      type: object
+      properties:
+        profile:
+          type: object
+          properties:
+            displayName:
+              type: string
+              example: "Admin User"
+            timezone:
+              type: string
+              example: "Asia/Kolkata"
+            theme:
+              type: string
+              enum: [light, dark, system]
+              example: "dark"
+        ai:
+          type: object
+          properties:
+            model:
+              type: string
+              example: "gemini-2.5-flash"
+            temperature:
+              type: number
+              example: 0.3
+            maxTokens:
+              type: integer
+              example: 1024
+        broadcast:
+          type: object
+          properties:
+            minDelaySec:
+              type: integer
+              example: 20
+            maxDelaySec:
+              type: integer
+              example: 45
+            dailyLimit:
+              type: integer
+              example: 1000
+
+  responses:
+    BadRequestError:
+      description: Invalid request parameters or request payload validation failed.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: error
+              code:
+                type: string
+                example: VALIDATION_ERROR
+              message:
+                type: string
+                example: "Validation failed: 'email' is a required field."
+
+    UnauthorizedError:
+      description: Authentication token is missing, invalid, or expired.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: error
+              code:
+                type: string
+                example: UNAUTHORIZED
+              message:
+                type: string
+                example: "Authentication required."
+
+    NotFoundError:
+      description: The requested resource could not be found.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: error
+              code:
+                type: string
+                example: NOT_FOUND
+              message:
+                type: string
+                example: "Resource not found."
