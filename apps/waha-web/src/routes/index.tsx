@@ -2,15 +2,8 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { Login } from "../features/auth/Login.js";
 import { PersonaSelection } from "../features/auth/PersonaSelection.js";
 import { WahaSettings } from "../features/settings/WahaSettings.js";
+import { CrmInbox } from "../features/crm/CrmInbox.js";
 import { ProtectedRoute } from "./ProtectedRoute.js";
-
-// Temporary screen layouts to satisfy router endpoints compile boundaries
-const CrmInboxPlaceholder = () => (
-  <div className="p-8">
-    <h1 className="text-2xl font-bold">CRM Inbox</h1>
-    <p className="text-muted text-sm mt-1">Inbox channel is ready for implementation in Sprint 3.</p>
-  </div>
-);
 
 const SettingsProfilePlaceholder = () => (
   <div className="p-8">
@@ -32,7 +25,7 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute allowedPersonas={["CRM", "ADMIN"]} />,
         children: [
-          { path: "crm/inbox", element: <CrmInboxPlaceholder /> }
+          { path: "crm/inbox", element: <CrmInbox /> }
         ]
       },
       {

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0-sprint4] - 2026-07-07
+### Added
+- Implemented real-time CRM Inbox workspace in `CrmInbox.tsx` featuring a three-column layout.
+- Added cursor-based pagination for both chat thread listings (`last_message_at`) and historical conversation feeds (`sent_at`).
+- Integrated inline message draft caching, saving composed message inputs in React state when agents switch between active chat threads.
+- Expanded conversation search on the backend, joining tables to search contact name, contact phone, or message body content.
+- Standardized delivery/read indicator statuses (`sending`, `sent`, `delivered`, `read`) with responsive tick symbols.
+- Added `POST /api/whatsapp/messages` to handle outbound message delivery via WAHA client integrations.
+- Added `POST /api/whatsapp/chats/:chatId/read` to clear thread unread counters.
+- Updated `docs/api_contract.yaml` to document the paginated chats, message history, read resets, and outbound sending endpoints.
+
 ## [1.0.0-sprint3] - 2026-07-07
 ### Added
 - Created database migration `011_seed_credentials.sql` to seed the default WAHA credentials mapped to the admin user.

@@ -572,6 +572,157 @@ paths:
                     type: string
                     example: Only administrators can modify WhatsApp connections.
 
+  /whatsapp/chats:
+    get:
+      summary: Get Chats Feed
+      description: Returns paginated lists of conversation threads with contact metadata and unread counts.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          description: ISO timestamp cursor value to fetch older chats.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Max count of threads to fetch.
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          description: Filter chats by contact name, phone, or message body text.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chats list retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  chats:
+                    type: array
+                    items:
+                      type: object
+                  nextCursor:
+                    type: string
+                    nullable: true
+                    example: "2026-07-07T12:00:00.000Z"
+
+  /whatsapp/chats/{chatId}/messages:
+    get:
+      summary: Get Chat Messages
+      description: Returns paginated historical speech bubbles for a conversation thread.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          description: ISO timestamp cursor value to fetch older messages.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Max count of messages to fetch.
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Messages history retrieved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                  nextCursor:
+                    type: string
+                    nullable: true
+                    example: "2026-07-07T11:30:00.000Z"
+
+  /whatsapp/chats/{chatId}/read:
+    post:
+      summary: Reset Chat Unread Counter
+      description: Marks all messages inside a conversation as read.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Unread counter reset successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Chat marked as read.
+
+  /whatsapp/messages:
+    post:
+      summary: Send Outbound Message
+      description: Sends a new outbound message to a WhatsApp customer via the provider client and saves to DB.
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - body
+              properties:
+                chatId:
+                  type: string
+                  description: Target database chat ID (required if phone is omitted).
+                phone:
+                  type: string
+                  description: Target customer phone number (required if chatId is omitted).
+                body:
+                  type: string
+                  description: Text body of the message.
+      responses:
+        '200':
+          description: Outbound message dispatched and logged.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: object
+
   /settings/system-info:
     get:
       summary: Get Server Health and System Information
