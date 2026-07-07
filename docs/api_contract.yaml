@@ -265,7 +265,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
-  /whatsapp/webhook/waha:
+  /webhooks/waha:
     post:
       summary: Ingest Webhook Event from WAHA
       description: Endpoint for WAHA to deliver incoming messages and status updates.
@@ -447,7 +447,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Settings'
 
-  /settings/whatsapp/qr:
+  /whatsapp/qr:
     get:
       summary: Get Session QR Code
       description: Requests WAHA session engine to output active QR code link if disconnected.
@@ -471,7 +471,7 @@ paths:
         '502':
           description: WAHA instance unreachable or connection error.
 
-  /settings/whatsapp/status:
+  /whatsapp/status:
     get:
       summary: Get WhatsApp Session Status
       description: Checks connection status of the WAHA engine and updates MySQL database state.
@@ -498,7 +498,7 @@ paths:
                         type: string
                         example: SCAN_QR
 
-  /settings/whatsapp/disconnect:
+  /whatsapp/disconnect:
     post:
       summary: Disconnect WhatsApp Session
       description: Stops the active WhatsApp session in WAHA and updates MySQL status. Restricted to ADMIN.
@@ -535,7 +535,7 @@ paths:
                     type: string
                     example: Only administrators can modify WhatsApp connections.
 
-  /settings/whatsapp/restart:
+  /whatsapp/restart:
     post:
       summary: Restart WhatsApp Session
       description: Disconnects and restarts the WhatsApp session in WAHA and updates status. Restricted to ADMIN.

@@ -17,8 +17,8 @@ async function getSessionDetails(userId: string) {
   return rows[0].whatsapp_session_name || "default";
 }
 
-// GET /settings/whatsapp/status - Retrieves session status and updates DB
-router.get("/whatsapp/status", requireAuth, async (req, res, next) => {
+// GET /whatsapp/status - Retrieves session status and updates DB
+router.get("/status", requireAuth, async (req, res, next) => {
   try {
     const authUser = res.locals.authUser;
     const sessionName = await getSessionDetails(authUser.id);
@@ -47,8 +47,8 @@ router.get("/whatsapp/status", requireAuth, async (req, res, next) => {
   }
 });
 
-// GET /settings/whatsapp/qr - Retrieves QR code base64 or string
-router.get("/whatsapp/qr", requireAuth, async (req, res, next) => {
+// GET /whatsapp/qr - Retrieves QR code base64 Data URI
+router.get("/qr", requireAuth, async (req, res, next) => {
   try {
     const authUser = res.locals.authUser;
     const sessionName = await getSessionDetails(authUser.id);
@@ -72,9 +72,8 @@ router.get("/whatsapp/qr", requireAuth, async (req, res, next) => {
       return;
     }
 
-    const qr = await wahaService.getQrCode(sessionName);
+    const qrDataUri = await wahaService.getQrCode(sessionName);
     
-    // Automatically trigger starting session if stopped
     if (wahaStatus === "DISCONNECTED") {
       try {
         await wahaService.startSession(sessionName);
@@ -85,19 +84,18 @@ router.get("/whatsapp/qr", requireAuth, async (req, res, next) => {
 
     res.json({
       status: "SCAN_QR",
-      qrCode: qr
+      qrCode: qrDataUri
     });
   } catch (err) {
     next(err);
   }
 });
 
-// POST /settings/whatsapp/disconnect - Disconnects WAHA session
-router.post("/whatsapp/disconnect", requireAuth, async (req, res, next) => {
+// POST /whatsapp/disconnect - Disconnects WAHA session (Admin only)
+router.post("/disconnect", requireAuth, async (req, res, next) => {
   try {
     const authUser = res.locals.authUser;
     
-    // Guard: Only ADMIN role is authorized to modify integrations
     if (authUser.role !== "ADMIN") {
       res.status(403).json({
         status: "error",
@@ -129,12 +127,11 @@ router.post("/whatsapp/disconnect", requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /settings/whatsapp/restart - Restarts WAHA session
-router.post("/whatsapp/restart", requireAuth, async (req, res, next) => {
+// POST /whatsapp/restart - Restarts WAHA session (Admin only)
+router.post("/restart", requireAuth, async (req, res, next) => {
   try {
     const authUser = res.locals.authUser;
     
-    // Guard: Only ADMIN role is authorized to modify integrations
     if (authUser.role !== "ADMIN") {
       res.status(403).json({
         status: "error",
@@ -157,7 +154,7 @@ router.post("/whatsapp/restart", requireAuth, async (req, res, next) => {
     try {
       await wahaService.stopSession(sessionName);
     } catch {
-      // Ignore failure to stop (e.g. if already stopped)
+      // Ignore stop errors if already disconnected
     }
 
     await wahaService.startSession(sessionName);
@@ -172,4 +169,4 @@ router.post("/whatsapp/restart", requireAuth, async (req, res, next) => {
   }
 });
 
-export { router as settingsRouter };
+export { router as whatsappRouter };

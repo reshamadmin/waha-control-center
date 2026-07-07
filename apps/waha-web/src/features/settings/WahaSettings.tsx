@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { io } from "socket.io-client";
 import axios from "axios";
 
-// Configure axios default endpoint mappings
 axios.defaults.baseURL = "http://localhost:3002";
 axios.defaults.withCredentials = true;
 
@@ -13,7 +13,7 @@ export const WahaSettings = () => {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await axios.get("/api/settings/whatsapp/status");
+      const res = await axios.get("/api/whatsapp/status");
       if (res.data.status === "success") {
         setStatus(res.data.session.status);
         if (res.data.session.status !== "SCAN_QR") {
@@ -27,9 +27,9 @@ export const WahaSettings = () => {
 
   const fetchQr = useCallback(async () => {
     try {
-      const res = await axios.get("/api/settings/whatsapp/qr");
+      const res = await axios.get("/api/whatsapp/qr");
       if (res.data.status === "SCAN_QR") {
-        setQrCode(res.data.qrCode);
+        setQrCode(res.data.qrCode); // Already a base64 png Data URL generated locally by backend
         setStatus("SCAN_QR");
       } else if (res.data.status === "CONNECTED") {
         setStatus("CONNECTED");
@@ -40,17 +40,28 @@ export const WahaSettings = () => {
     }
   }, []);
 
-  // Polling loop for connection status updates
+  // 1. Establish Socket.IO real-time event bindings for status changes
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(() => {
-      fetchStatus();
-    }, 5000);
 
-    return () => clearInterval(interval);
+    const socket = io("http://localhost:3002", {
+      withCredentials: true,
+      transports: ["websocket", "polling"]
+    });
+
+    socket.on("whatsapp:status", (data: any) => {
+      setStatus(data.status);
+      if (data.status !== "SCAN_QR") {
+        setQrCode(null);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [fetchStatus]);
 
-  // Fetch QR code if status requires scan
+  // 2. Fetch QR code if status transitions to QR Scan
   useEffect(() => {
     if (status === "SCAN_QR" && !qrCode) {
       fetchQr();
@@ -61,7 +72,7 @@ export const WahaSettings = () => {
     setActionLoading(true);
     setError(null);
     try {
-      await axios.post("/api/settings/whatsapp/disconnect");
+      await axios.post("/api/whatsapp/disconnect");
       setStatus("DISCONNECTED");
       setQrCode(null);
     } catch (err: any) {
@@ -75,7 +86,7 @@ export const WahaSettings = () => {
     setActionLoading(true);
     setError(null);
     try {
-      await axios.post("/api/settings/whatsapp/restart");
+      await axios.post("/api/whatsapp/restart");
       setStatus("LOADING");
       setTimeout(() => {
         fetchStatus();
@@ -113,7 +124,7 @@ export const WahaSettings = () => {
                   {status === "CONNECTED" && (
                     <>
                       <span className="w-2.5 h-2.5 bg-success rounded-full animate-pulse"></span>
-                      <span className="text-success text-sm font-bold">Connected</span>
+                      <span className="text-success text-sm font-bold">Connected (Real-time Socket Linked)</span>
                     </>
                   )}
                   {status === "SCAN_QR" && (
@@ -170,7 +181,7 @@ export const WahaSettings = () => {
             <div className="space-y-4">
               <div className="border border-line rounded-xl p-3 bg-slate-50 inline-block shadow-sm">
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`}
+                  src={qrCode} // Renders base64 QR Data URI directly
                   alt="WhatsApp Linking QR Code"
                   className="w-48 h-48 block"
                 />

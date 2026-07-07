@@ -1,9 +1,11 @@
 import axios from "axios";
+import QRCode from "qrcode";
 import { env } from "../config.js";
 import { logger } from "../logger.js";
 import { pool } from "../db.js";
+import { WhatsAppProvider } from "../providers/WhatsAppProvider.js";
 
-export class WahaService {
+export class WahaService implements WhatsAppProvider {
   private client = axios.create({
     baseURL: env.WAHA_BASE_URL,
     headers: env.WAHA_API_KEY ? { "x-api-key": env.WAHA_API_KEY } : {}
@@ -16,7 +18,6 @@ export class WahaService {
       if (Array.isArray(sessions)) {
         const session = sessions.find((s: any) => s.name === sessionName);
         if (session) {
-          // Map WAHA status to our ENUM
           const status = session.status?.toUpperCase() || "DISCONNECTED";
           if (status === "CONNECTED" || status === "AUTHENTICATED") return "CONNECTED";
           if (status === "SCAN_QR" || status === "SCAN") return "SCAN_QR";
@@ -52,20 +53,24 @@ export class WahaService {
 
   async getQrCode(sessionName: string): Promise<string | null> {
     try {
-      // WAHA fetches QR either from /api/sessions/{sessionName}/qr or /api/screens/{sessionName}/qr
       const res = await this.client.get(`/api/sessions/${sessionName}/qr`);
+      let qrText = null;
       if (res.data && res.data.qr) {
-        return res.data.qr;
+        qrText = res.data.qr;
       }
-      // Fallback: return mock QR string if session is disconnected but REST returns empty or raw png
-      return "mock_qr_data_2@abc123xyz_resham_sutra_waha_connection_console_active";
+      if (!qrText) {
+        qrText = "mock_qr_data_2@abc123xyz_resham_sutra_waha_connection_console_active";
+      }
+
+      // Generate local QR Data URI
+      return await QRCode.toDataURL(qrText);
     } catch (err: any) {
-      logger.warn({ error: err.message, sessionName }, "Failed to fetch QR code from WAHA, returning mock fallback");
-      return "mock_qr_data_2@abc123xyz_resham_sutra_waha_connection_console_active";
+      logger.warn({ error: err.message, sessionName }, "Failed to fetch QR code from WAHA, returning mock QR Data URI");
+      const mockQrText = "mock_qr_data_2@abc123xyz_resham_sutra_waha_connection_console_active";
+      return await QRCode.toDataURL(mockQrText);
     }
   }
 
-  // Sync session status to MySQL database
   async syncSessionStatusToDb(userId: string, sessionName: string): Promise<void> {
     const status = await this.getSessionStatus(sessionName);
     const connectedAt = status === "CONNECTED" ? new Date() : null;
