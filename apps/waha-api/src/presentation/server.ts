@@ -9,6 +9,7 @@ import { checkDatabaseConnection, runMigrations } from "../infrastructure/db.js"
 import { authRouter } from "./routes/authRoutes.js";
 import { whatsappRouter } from "./routes/whatsappRoutes.js";
 import { webhookRouter } from "./routes/webhookRoutes.js";
+import { broadcastRouter } from "./routes/broadcastRoutes.js";
 import { logger } from "../infrastructure/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,11 +33,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Expose public uploads folder statically (Refinement 8)
+// Expose public uploads folder statically
 app.use("/uploads", express.static(path.resolve(__dirname, "../../../../public/uploads")));
 
 // Routes
 app.use("/api/auth", authRouter);
+app.use("/api/whatsapp/broadcasts", broadcastRouter);
 app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/webhooks", webhookRouter);
 

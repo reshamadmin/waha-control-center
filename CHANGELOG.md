@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0-sprint6] - 2026-07-07
+### Added
+- Implemented Campaign State Machine backing proper lifecycles: `DRAFT`, `VALIDATED`, `SCHEDULED`, `RUNNING`, `PAUSED`, `COMPLETED`.
+- Built an 8-Step Campaign Wizard workflow in `CrmBroadcasts.tsx` (Title definition, CSV upload, header mappings, composer templates, substitution previews, safe delay rules, scheduled windows, and review boards).
+- Added client-side CSV parsing supporting dynamic field maps (mapping any column header to target phone, name, and village variables).
+- Added variable preview controls parsing real imported rows to test variables replacement rendering.
+- Created MySQL schema migration `014_broadcasts_refinements.sql` supporting details error logs, retry states, and variables mapping text.
+- Added validation reports logging duplicates, empty values, valid, and invalid targets, including trigger links to download rejected rows.
+- Coded active campaign dashboards displaying progress bars, success/failure percentages, live average sending speeds, and ETA estimator controls.
+- Integrated queue controller actions: dry-run sent to logged-in user, pauses, resumes, and retries failed campaigns.
+- Created `broadcast.test.ts` verifying all lifecycle control dispatches.
+
+## [1.0.0-sprint5] - 2026-07-07
+### Added
+- Standardized provider abstraction patterns: `WhatsAppProvider`, `StorageProvider`, `AIProvider`, `EmailProvider`, and `NotificationProvider`.
+- Created database migration `012_message_media.sql` for 1-to-N message attachments (`whatsapp_messages_media`).
+- Created database migration `013_message_templates.sql` seeding quick replies: `/thanks`, `/catalog`, `/meeting`, `/payment` variables.
+- Built a multiple file upload receiver at `POST /api/whatsapp/media/upload` using `multer`.
+- Implemented `MediaService` executing file types/size checks (excluding executable vectors), generating thumbnails, and compressing images via `sharp`.
+- Coded `S3StorageProvider` supporting DigitalOcean Spaces with automated fallback to `LocalStorageProvider` using static paths routing.
+- Added fullscreen lightbox preview viewer with scales and rotation triggers.
+- Added drag-and-drop file imports, clipboard paste events intercept, and cached upload drafts in React.
+- Coded audio notes playback player with speeds controls (`1x`, `1.5x`, `2x`).
+
 ## [1.0.0-sprint4] - 2026-07-07
 ### Added
 - Implemented real-time CRM Inbox workspace in `CrmInbox.tsx` featuring a three-column layout.
@@ -23,7 +47,6 @@ All notable changes to this project will be documented in this file.
 - Integrated automatic contact/conversation synchronization in the webhook handler: syncs chat records into the `whatsapp_chats` table and logs/archives all message details inside `whatsapp_messages`.
 - Wired live updates via Socket.IO (`whatsapp:message` and `whatsapp:status` channels), updating the frontend settings console instantly without relying on polling.
 - Exposed transport-oriented endpoints under the `/api/whatsapp/*` namespaces (`/status`, `/qr`, `/disconnect`, `/restart`), consuming them in the Settings UI.
-- Updated `docs/api_contract.yaml` to document the `/api/whatsapp/*` transport-oriented paths and the `/api/webhooks/waha` receiver.
 
 ## [1.0.0-sprint2] - 2026-07-07
 ### Added
@@ -41,5 +64,5 @@ All notable changes to this project will be documented in this file.
 - Created standalone production-grade monorepo setup for `waha-control-center`.
 - Setup feature-based React workspace in `apps/waha-web` with Vite, TypeScript, and Tailwind CSS.
 - Setup Express API backend workspace in `apps/waha-api` with Zod configurations and Vitest integration suites.
-- Added GitHub Actions workflow configuration for continuous integration (CI) on code pushes.
+- Added GitHub Actions workflow configuration for continuous integration (CN) on code pushes.
 - Copied technical and functional specifications into the `docs/` repository directory.

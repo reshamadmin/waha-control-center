@@ -3,6 +3,7 @@ import { Login } from "../features/auth/Login.js";
 import { PersonaSelection } from "../features/auth/PersonaSelection.js";
 import { WahaSettings } from "../features/settings/WahaSettings.js";
 import { CrmInbox } from "../features/crm/CrmInbox.js";
+import { CrmBroadcasts } from "../features/crm/CrmBroadcasts.js";
 import { ProtectedRoute } from "./ProtectedRoute.js";
 
 const SettingsProfilePlaceholder = () => (
@@ -25,7 +26,8 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute allowedPersonas={["CRM", "ADMIN"]} />,
         children: [
-          { path: "crm/inbox", element: <CrmInbox /> }
+          { path: "crm/inbox", element: <CrmInbox /> },
+          { path: "crm/broadcasts", element: <CrmBroadcasts /> }
         ]
       },
       {

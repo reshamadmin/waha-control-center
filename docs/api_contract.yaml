@@ -795,6 +795,198 @@ paths:
                     type: integer
                     example: 145
 
+  /whatsapp/broadcasts:
+    post:
+      summary: Create Campaign & Queue Recipients
+      description: Validates recipient rows, compiles validation report summaries, and writes targets to the broadcast queues.
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - templateBody
+              properties:
+                title:
+                  type: string
+                recipients:
+                  type: array
+                  items:
+                    type: object
+                mappedFields:
+                  type: object
+                templateBody:
+                  type: string
+                mediaAttachments:
+                  type: array
+                  items:
+                    type: object
+                sendingRules:
+                  type: object
+                scheduledAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Campaign initialized and valid recipients queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  broadcastId:
+                    type: string
+                    example: "brd_7f2b1d30"
+                  validationReport:
+                    type: object
+
+    get:
+      summary: List Campaign History Logs
+      description: Returns campaigns list along with sent, failed, and pending message counts.
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Campaigns list retrieved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  broadcasts:
+                    type: array
+                    items:
+                      type: object
+
+  /whatsapp/broadcasts/{id}:
+    get:
+      summary: Get Campaign Details & Live Analytics
+      description: Returns detailed stats (sent, failed, pending, success rates) and dynamic ETA completions.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign statistics analytics.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  campaign:
+                    type: object
+                  analytics:
+                    type: object
+
+  /whatsapp/broadcasts/{id}/dry-run:
+    post:
+      summary: Send Dry Run Preview Only to Me
+      description: Dispatches template message using first-row variables directly to the logged-in agent.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+              properties:
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: Preview message successfully delivered.
+
+  /whatsapp/broadcasts/{id}/launch:
+    post:
+      summary: Launch Campaign Broadcast
+      description: Starts the sending thread runner for the broadcast.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign status set to RUNNING.
+
+  /whatsapp/broadcasts/{id}/pause:
+    post:
+      summary: Pause Campaign Broadcast
+      description: Suspends queue dispatches.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign paused.
+
+  /whatsapp/broadcasts/{id}/resume:
+    post:
+      summary: Resume Campaign Broadcast
+      description: Resumes queue dispatches.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign resumed.
+
+  /whatsapp/broadcasts/{id}/retry-failed:
+    post:
+      summary: Retry Failed Messages Only
+      description: Resets failed messages status to pending to trigger re-attempts.
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Failed queues queued back.
+
 components:
   securitySchemes:
     CookieAuth:
