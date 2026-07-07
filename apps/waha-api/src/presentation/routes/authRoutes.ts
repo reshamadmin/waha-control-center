@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
-import { UserRepository } from "../repositories/UserRepository.js";
+import { UserRepository } from "../../infrastructure/repositories/UserRepository.js";
 import { 
   verifyPassword, 
   generateToken, 
   setSessionCookie, 
   clearSessionCookie, 
   requireAuth 
-} from "../auth.js";
+} from "../../application/auth.js";
 
 const router = Router();
 const userRepository = new UserRepository();
@@ -74,7 +74,7 @@ router.post("/logout", (req, res) => {
   res.json({ status: "success" });
 });
 
-// GET /auth/me (Get current session details)
+// GET /auth/me
 router.get("/me", requireAuth, (req, res) => {
   res.json({
     status: "success",

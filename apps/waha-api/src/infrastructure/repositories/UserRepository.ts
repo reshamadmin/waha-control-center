@@ -1,5 +1,5 @@
 import { pool } from "../db.js";
-import { User, UserRole, Persona } from "../models/User.js";
+import { User, UserRole, Persona } from "../../domain/User.js";
 
 interface UserRow {
   id: string;

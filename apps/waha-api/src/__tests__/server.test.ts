@@ -9,8 +9,8 @@ vi.hoisted(() => {
   process.env.ENCRYPTION_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 });
 
-// Mock the database pool and connection module
-vi.mock("../db.js", () => ({
+// Mock the database pool and connection module in infrastructure
+vi.mock("../infrastructure/db.js", () => ({
   pool: {
     execute: vi.fn(),
     getConnection: vi.fn()

@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { requireAuth } from "../auth.js";
-import { WahaService } from "../services/WahaService.js";
-import { pool } from "../db.js";
-import { logger } from "../logger.js";
+import { requireAuth } from "../../application/auth.js";
+import { WahaService } from "../../infrastructure/providers/WahaService.js";
+import { pool } from "../../infrastructure/db.js";
+import { logger } from "../../infrastructure/logger.js";
 
 const router = Router();
 const wahaService = new WahaService();
@@ -17,7 +17,7 @@ async function getSessionDetails(userId: string) {
   return rows[0].whatsapp_session_name || "default";
 }
 
-// GET /whatsapp/status - Retrieves session status and updates DB
+// GET /whatsapp/status
 router.get("/status", requireAuth, async (req, res, next) => {
   try {
     const authUser = res.locals.authUser;
@@ -47,7 +47,7 @@ router.get("/status", requireAuth, async (req, res, next) => {
   }
 });
 
-// GET /whatsapp/qr - Retrieves QR code base64 Data URI
+// GET /whatsapp/qr
 router.get("/qr", requireAuth, async (req, res, next) => {
   try {
     const authUser = res.locals.authUser;
@@ -91,7 +91,7 @@ router.get("/qr", requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /whatsapp/disconnect - Disconnects WAHA session (Admin only)
+// POST /whatsapp/disconnect
 router.post("/disconnect", requireAuth, async (req, res, next) => {
   try {
     const authUser = res.locals.authUser;
@@ -127,7 +127,7 @@ router.post("/disconnect", requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /whatsapp/restart - Restarts WAHA session (Admin only)
+// POST /whatsapp/restart
 router.post("/restart", requireAuth, async (req, res, next) => {
   try {
     const authUser = res.locals.authUser;

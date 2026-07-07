@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
-import { env } from "./config.js";
-import { UserRepository } from "./repositories/UserRepository.js";
-import { UserRole, Persona } from "./models/User.js";
-import { logger } from "./logger.js";
+import { env } from "../infrastructure/config.js";
+import { UserRepository } from "../infrastructure/repositories/UserRepository.js";
+import { UserRole, Persona } from "../domain/User.js";
+import { logger } from "../infrastructure/logger.js";
 
 const userRepository = new UserRepository();
 

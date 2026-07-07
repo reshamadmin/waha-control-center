@@ -10,12 +10,12 @@ vi.hoisted(() => {
 });
 
 // Mock database pool executions directly
-vi.mock("../db.js", () => {
+vi.mock("../infrastructure/db.js", () => {
   const mockUserRow = {
     id: "usr_admin_default",
     name: "Resham Sutra Admin",
     email: "admin@reshamsutra.com",
-    password_hash: "$2b$10$5jhdPgWK9jUPI9Zyp.fKSuxuydwwEKamM0ywPRR4OcuzsbGzerYyS", // Bcrypt hash of 'admin123'
+    password_hash: "$2b$10$5jhdPgWK9jUPI9Zyp.fKSuxuydwwEKamM0ywPRR4OcuzsbGzerYyS", // Correct Bcrypt hash of 'admin123'
     role: "ADMIN",
     default_persona: "CRM",
     created_at: new Date(),
@@ -50,7 +50,7 @@ vi.mock("../db.js", () => {
 });
 
 import { app } from "../server.js";
-import { hashPassword, verifyPassword } from "../auth.js";
+import { hashPassword, verifyPassword } from "../application/auth.js";
 
 describe("Authentication Services & Routes integration tests", () => {
   describe("Password Hashing Functions", () => {

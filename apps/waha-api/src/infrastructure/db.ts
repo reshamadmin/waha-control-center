@@ -37,7 +37,7 @@ export async function runMigrations(): Promise<void> {
     `);
 
     // 2. Read migration directory
-    const migrationsDir = path.resolve(__dirname, "../../../migrations");
+    const migrationsDir = path.resolve(__dirname, "../../../../migrations");
     const files = await fs.readdir(migrationsDir);
     const sqlFiles = files.filter((f) => f.endsWith(".sql")).sort();
 

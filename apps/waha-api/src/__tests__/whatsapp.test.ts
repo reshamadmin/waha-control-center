@@ -11,7 +11,7 @@ vi.hoisted(() => {
 });
 
 // Mock database pool directly inside the hoisted factory
-vi.mock("../db.js", () => {
+vi.mock("../infrastructure/db.js", () => {
   const mockAdminUser = {
     id: "usr_admin_default",
     name: "Resham Sutra Admin",
@@ -38,20 +38,17 @@ vi.mock("../db.js", () => {
     pool: {
       execute: vi.fn().mockImplementation(async (sql: string, params?: any[]) => {
         const query = sql.trim();
-        // User lookups
         if (query.includes("SELECT * FROM users WHERE id = ?")) {
           const id = params?.[0];
           if (id === "usr_admin_default") return [[mockAdminUser], []];
           if (id === "usr_normal_default") return [[mockNormalUser], []];
         }
-        // Credentials lookup
         if (query.includes("SELECT whatsapp_session_name FROM user_credentials WHERE user_id = ?")) {
           return [[{ whatsapp_session_name: "default" }], []];
         }
         if (query.includes("SELECT user_id FROM user_credentials WHERE whatsapp_session_name = ?")) {
           return [[{ user_id: "usr_admin_default" }], []];
         }
-        // Chats lookup
         if (query.includes("SELECT id, unread_count FROM whatsapp_chats WHERE user_id = ? AND waha_chat_id = ?")) {
           return [[], []]; // Return empty so a new chat is created
         }
@@ -64,8 +61,8 @@ vi.mock("../db.js", () => {
   };
 });
 
-// Mock WahaService class operations
-vi.mock("../services/WahaService.js", () => {
+// Mock WahaService class operations in infrastructure
+vi.mock("../infrastructure/providers/WahaService.js", () => {
   return {
     WahaService: vi.fn().mockImplementation(() => {
       return {
@@ -80,7 +77,7 @@ vi.mock("../services/WahaService.js", () => {
 });
 
 import { app } from "../server.js";
-import { pool } from "../db.js";
+import { pool } from "../infrastructure/db.js";
 
 // Helper to generate cookies for requests
 function createAuthCookie(userId: string, role: string, persona: string): string {

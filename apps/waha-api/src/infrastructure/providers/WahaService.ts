@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { env } from "../config.js";
 import { logger } from "../logger.js";
 import { pool } from "../db.js";
-import { WhatsAppProvider } from "../providers/WhatsAppProvider.js";
+import { WhatsAppProvider } from "../../domain/WhatsAppProvider.js";
 
 export class WahaService implements WhatsAppProvider {
   private client = axios.create({
