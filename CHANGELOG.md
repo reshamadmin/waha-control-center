@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0-sprint8] - 2026-07-07
+### Added
+- Integrated Gemini 2.5 Flash via REST wrapper `GeminiAIProvider` with cost tracking telemetry calculations.
+- Coded SQL-polling `AIWorker` executing background asynchronous text summaries and semantic intent classifications.
+- Created MySQL schemas migration `016_ai_integration.sql` creating `conversation_ai`, `prompt_templates`, `ai_usage`, and `ai_feedback` tables.
+- Built interactive `AiSidebar.tsx` panel in CRM Inbox displaying extracted metadata, priority, sentiment, and knowledge facts.
+- Generated multi-style suggested replies (Professional, Friendly, Short, Detailed) with copy tools and 👍/👎 review logging.
+- Coded `AiSettings.tsx` console featuring editable prompt libraries, prompt sandbox playgrounds, and 30-day token aggregate charts.
+- Wrote integration test suite `aiIntelligence.test.ts` verifying all route actions.
+
+## [1.0.0-sprint7] - 2026-07-07
+### Added
+- Developed generic background `JobEngine` processing polling tasks using atomic transactions (`SELECT ... FOR UPDATE SKIP LOCKED`).
+- Created database migration `015_queue_refinements.sql` supporting attempts counters, lock worker IDs, and campaign stop states.
+- Implemented `BroadcastWorker` processing outbound campaign message dispatches and classifying exceptions.
+- Added strict business hours checks and weekday filters to regulate dispatch schedules.
+- Structured real-time Socket.IO worker telemetry events (`campaign.progress`, `campaign.completed`, `queue.updated`).
+- Appended a Diagnostics section to the sidebar of `CrmBroadcasts.tsx` showing active uptime and latency metrics.
+
 ## [1.0.0-sprint6] - 2026-07-07
 ### Added
 - Implemented Campaign State Machine backing proper lifecycles: `DRAFT`, `VALIDATED`, `SCHEDULED`, `RUNNING`, `PAUSED`, `COMPLETED`.

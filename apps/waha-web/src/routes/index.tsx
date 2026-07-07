@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { Login } from "../features/auth/Login.js";
 import { PersonaSelection } from "../features/auth/PersonaSelection.js";
 import { WahaSettings } from "../features/settings/WahaSettings.js";
+import { AiSettings } from "../features/settings/AiSettings.js";
 import { CrmInbox } from "../features/crm/CrmInbox.js";
 import { CrmBroadcasts } from "../features/crm/CrmBroadcasts.js";
 import { ProtectedRoute } from "./ProtectedRoute.js";
@@ -34,7 +35,8 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute allowedPersonas={["ADMIN"]} />,
         children: [
           { path: "settings/profile", element: <SettingsProfilePlaceholder /> },
-          { path: "settings/waha", element: <WahaSettings /> }
+          { path: "settings/waha", element: <WahaSettings /> },
+          { path: "settings/ai", element: <AiSettings /> }
         ]
       }
     ]

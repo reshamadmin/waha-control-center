@@ -10,6 +10,7 @@ import { authRouter } from "./routes/authRoutes.js";
 import { whatsappRouter } from "./routes/whatsappRoutes.js";
 import { webhookRouter } from "./routes/webhookRoutes.js";
 import { broadcastRouter } from "./routes/broadcastRoutes.js";
+import { aiRouter } from "./routes/aiRoutes.js";
 import { logger } from "../infrastructure/logger.js";
 import { JobEngine } from "../application/jobs/JobEngine.js";
 
@@ -44,6 +45,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/whatsapp/broadcasts", broadcastRouter);
 app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/webhooks", webhookRouter);
+app.use("/api/ai", aiRouter);
 
 // Health check endpoint
 app.get("/health", async (req, res) => {

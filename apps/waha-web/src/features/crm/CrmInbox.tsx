@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
+import { AiSidebar } from "./AiSidebar.js";
 import { 
   Send, 
   Search, 
@@ -931,6 +932,10 @@ export const CrmInbox = () => {
           </div>
         )}
       </div>
+
+      {activeChat && (
+        <AiSidebar chatId={activeChat.id} />
+      )}
 
       {/* Lightbox Media Fullscreen Modal (Refinement 9) */}
       {lightboxMedia && (

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { pool } from "../../infrastructure/db.js";
 import { BroadcastWorker } from "./BroadcastWorker.js";
+import { AIWorker } from "./AIWorker.js";
 import { logger } from "../../infrastructure/logger.js";
 import { io } from "../../presentation/server.js";
 
@@ -9,6 +10,7 @@ export class JobEngine {
   private pollingTimer: NodeJS.Timeout | null = null;
   private isProcessing = false;
   private broadcastWorker = new BroadcastWorker();
+  private aiWorker = new AIWorker();
 
   // Refinement 8: Worker Metrics collection
   private metrics = {
@@ -58,12 +60,59 @@ export class JobEngine {
       // 1. Transaction-locked dequeue (Refinement SELECT FOR UPDATE SKIP LOCKED)
       await connection.beginTransaction();
 
+      // Check first for AI analysis background tasks
+      const aiSelectSql = `
+        SELECT id, phone, attempts, job_type
+        FROM broadcast_queue
+        WHERE status = 'pending' AND job_type = 'ai_analysis'
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED;
+      `;
+
+      const [aiRows] = await connection.execute<any[]>(aiSelectSql);
+
+      if (aiRows.length > 0) {
+        const job = aiRows[0];
+        // Set to processing
+        await connection.execute(
+          "UPDATE broadcast_queue SET status = 'processing', worker_id = ? WHERE id = ?",
+          [this.workerId, job.id]
+        );
+        await connection.commit();
+
+        // Process AI Worker
+        const result = await this.aiWorker.processJob({
+          id: job.id,
+          phone: job.phone,
+          worker_id: this.workerId,
+          attempts: job.attempts
+        });
+
+        let finalStatus = "sent";
+        const nextAttempt = job.attempts + 1;
+        if (result.status === "failed") {
+          finalStatus = nextAttempt >= 3 ? "dead_letter" : "pending";
+        } else if (result.status === "dead_letter") {
+          finalStatus = "dead_letter";
+        }
+
+        await pool.execute(
+          "UPDATE broadcast_queue SET status = ?, attempts = ?, processed_at = NOW() WHERE id = ?",
+          [finalStatus, nextAttempt, job.id]
+        );
+
+        this.isProcessing = false;
+        connection.release();
+        return;
+      }
+
+      // If no pending AI tasks, fall back to campaign broadcasts
       const selectSql = `
-        SELECT q.id, q.broadcast_id, q.phone, q.variables, q.attempts,
+        SELECT q.id, q.broadcast_id, q.phone, q.variables, q.attempts, q.job_type,
                b.user_id, b.template_body, b.media_attachments, b.sending_rules, b.status as campaign_status
         FROM broadcast_queue q
         JOIN broadcasts b ON q.broadcast_id = b.id
-        WHERE q.status = 'pending' AND b.status = 'RUNNING'
+        WHERE q.status = 'pending' AND q.job_type = 'broadcast' AND b.status = 'RUNNING'
         LIMIT 1
         FOR UPDATE SKIP LOCKED;
       `;
