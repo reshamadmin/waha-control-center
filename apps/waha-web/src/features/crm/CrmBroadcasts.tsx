@@ -109,9 +109,33 @@ export const CrmBroadcasts = () => {
     }
   };
 
+  const [workerMetrics, setWorkerMetrics] = useState<any | null>(null);
+
+  const fetchWorkerMetrics = async () => {
+    try {
+      const res = await axios.get("/api/whatsapp/broadcasts/worker/metrics");
+      if (res.data.status === "success") {
+        setWorkerMetrics(res.data.metrics);
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     fetchCampaigns();
+    fetchWorkerMetrics();
+    const interval = setInterval(fetchWorkerMetrics, 10000);
+    return () => clearInterval(interval);
   }, []);
+
+  const handleEmergencyStopCampaign = async (id: string) => {
+    try {
+      await axios.post(`/api/whatsapp/broadcasts/${id}/stop`);
+      fetchCampaignDetails(id);
+      fetchCampaigns();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Fetch campaign details & live analytics (Refinement 9)
   const fetchCampaignDetails = async (id: string) => {
@@ -432,6 +456,22 @@ export const CrmBroadcasts = () => {
             })
           )}
         </div>
+
+        {/* Worker Diagnostics Card (Refinement 8) */}
+        {workerMetrics && (
+          <div className="p-4 border-t border-line bg-slate-50 text-left text-[11px] text-muted space-y-2 select-none shrink-0">
+            <h4 className="font-bold text-ink uppercase tracking-wider text-[9px] flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-accent shrink-0" /> Queue worker diagnostics
+            </h4>
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+              <div>Uptime: <strong className="text-ink">{workerMetrics.worker_uptime}</strong></div>
+              <div>Depth: <strong className="text-ink">{workerMetrics.queue_depth} jobs</strong></div>
+              <div>Sent: <strong className="text-ink">{workerMetrics.messages_sent}</strong></div>
+              <div>Failed: <strong className="text-ink">{workerMetrics.messages_failed}</strong></div>
+              <div className="col-span-2">Avg latency: <strong className="text-ink">{workerMetrics.average_send_time_ms} ms</strong></div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main View Area */}
@@ -477,12 +517,22 @@ export const CrmBroadcasts = () => {
                     <Play className="w-4 h-4" /> Resume Campaign
                   </button>
                 )}
-                {detailAnalytics?.failed > 0 && (
+                 {detailAnalytics?.failed > 0 && (
                   <button
+                    type="button"
                     onClick={() => handleRetryFailedCampaign(detailCampaign.id)}
                     className="flex items-center gap-1.5 px-4 py-2 border border-accent text-accent bg-white rounded-xl hover:bg-slate-50 text-xs font-bold transition-all shadow-sm"
                   >
                     <RotateCcw className="w-4 h-4" /> Retry Failed Only
+                  </button>
+                )}
+                {(detailCampaign.status === "RUNNING" || detailCampaign.status === "PAUSED") && (
+                  <button
+                    type="button"
+                    onClick={() => handleEmergencyStopCampaign(detailCampaign.id)}
+                    className="flex items-center gap-1.5 px-4 py-2 border border-danger/30 text-danger bg-danger/5 rounded-xl hover:bg-danger/10 text-xs font-bold transition-all shadow-sm"
+                  >
+                    Emergency Stop
                   </button>
                 )}
               </div>

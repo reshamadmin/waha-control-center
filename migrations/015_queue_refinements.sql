@@ -1,0 +1,7 @@
+ALTER TABLE \`broadcast_queue\`
+  ADD COLUMN \`attempts\` INT NOT NULL DEFAULT 0,
+  ADD COLUMN \`processed_at\` TIMESTAMP NULL DEFAULT NULL,
+  ADD COLUMN \`worker_id\` VARCHAR(36) DEFAULT NULL;
+
+ALTER TABLE \`broadcasts\`
+  ADD COLUMN \`stopped_at\` TIMESTAMP NULL DEFAULT NULL;

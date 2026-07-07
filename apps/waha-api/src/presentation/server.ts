@@ -11,6 +11,7 @@ import { whatsappRouter } from "./routes/whatsappRoutes.js";
 import { webhookRouter } from "./routes/webhookRoutes.js";
 import { broadcastRouter } from "./routes/broadcastRoutes.js";
 import { logger } from "../infrastructure/logger.js";
+import { JobEngine } from "../application/jobs/JobEngine.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,8 @@ const io = new Server(httpServer, {
     credentials: true
   }
 });
+
+export const jobEngine = new JobEngine();
 
 // Middlewares
 app.use(cors({
@@ -97,6 +100,9 @@ export async function startServer() {
       logger.info("⚙️ Initializing database migrations check...");
       await runMigrations();
       logger.info("✅ Database migration checking completed.");
+
+      logger.info("⚙️ Booting background Job Engine...");
+      jobEngine.start();
     }
   } catch (err) {
     logger.error({ error: err }, "⚠️ Failed to apply migrations during startup, proceeding with boot");
