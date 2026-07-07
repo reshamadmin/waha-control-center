@@ -275,3 +275,34 @@ As an Administrator, I want a centralized settings panel to configure API keys, 
 2. Sensitive keys are encrypted in MySQL using the encryption key.
 3. System Diagnostics display accurate server status and connection info.
 4. Audit Log lists admin configuration actions.
+
+---
+
+## Technical Debt & Backlog Enhancements
+
+The following architectural enhancements, refactorings, and optimizations have been identified and deferred to the technical debt/backlog:
+
+### 1. Asynchronous Webhook Event Processor
+- **Objective:** Move webhook ingestion from the inline Express router thread into an asynchronous processing queue.
+- **Rationale:** Currently, incoming `POST /api/webhooks/waha` payloads directly wait on MySQL sync queries, which can slow down webhook response times during peak message traffic. Extracting this into a worker thread/process will decouple HTTP response cycles from ingestion latency.
+- **Proposed Solution:** Introduce a memory-based queue or Redis/BullMQ worker task pool to ingest payloads instantly with a `200 OK` and process database syncs in the background.
+
+### 2. Inbound Message Normalizer Service
+- **Objective:** Introduce a normalization abstraction helper translating raw payload payloads from different WhatsApp platforms.
+- **Rationale:** De-coupling the business logic from WAHA-specific raw payload structures allows the app to swap or support multiple WhatsApp gateways (e.g., Twilio, Meta Cloud API, or standard WAHA) without rewriting database synchronization code.
+- **Proposed Solution:** Build a parser interface mapping different JSON webhook payloads into a unified internal representation before sync database commits.
+
+### 3. Comprehensive System Health diagnostics
+- **Objective:** Standardize the `/health` and `/api/whatsapp/status` endpoints to check all auxiliary connections.
+- **Rationale:** A full health assessment requires querying both direct database connection status and the WAHA Docker API node availability.
+- **Proposed Solution:** Extend `/health` to execute checking on remote WAHA sessions status, memory availability, and MySQL connection latencies.
+
+### 4. Diagnostics Metrics & Monitoring `/metrics` Endpoint
+- **Objective:** Expose a Prometheus-compatible metrics endpoint for system monitoring.
+- **Rationale:** Production observability requires tracking memory usage, active Socket.IO connection pools, query execution latencies, webhook processing failures, and API counts.
+- **Proposed Solution:** Implement `express-prom-bundle` or custom registers outputting key performance indicators to Grafana/Prometheus.
+
+### 5. Structured Event Enums for Socket/Webhook Channels
+- **Objective:** Migrate all string literal event triggers to strict TypeScript enums/unions.
+- **Rationale:** Typing Socket.IO emits and webhook event handlers with enums (e.g. `WebhookEventTypes`, `SocketEventTypes`) prevents spelling bugs and enforces structure during compiles.
+- **Proposed Solution:** Declare and compile a central event schema vocabulary under `src/domain/Events.ts`.
