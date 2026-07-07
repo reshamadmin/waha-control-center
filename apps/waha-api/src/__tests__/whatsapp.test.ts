@@ -59,6 +59,15 @@ vi.mock("../infrastructure/db.js", () => {
     sent_at: new Date()
   };
 
+  const mockTemplateRow = {
+    id: "tmpl_thanks",
+    title: "/thanks",
+    category: "quick_reply",
+    body: "Hi {{name}}, thank you for contacting us!",
+    variables: "name",
+    active: 1
+  };
+
   return {
     pool: {
       execute: vi.fn().mockImplementation(async (sql: string, params?: any[]) => {
@@ -75,7 +84,7 @@ vi.mock("../infrastructure/db.js", () => {
           return [[{ user_id: "usr_admin_default" }], []];
         }
         if (query.includes("SELECT id, unread_count FROM whatsapp_chats WHERE user_id = ? AND waha_chat_id = ?")) {
-          return [[], []]; // Return empty so a new chat is created in sync webhook tests
+          return [[], []];
         }
         if (query.includes("SELECT DISTINCT c.id, c.user_id, c.customer_id, c.waha_chat_id")) {
           return [[mockChatRow], []];
@@ -85,6 +94,9 @@ vi.mock("../infrastructure/db.js", () => {
         }
         if (query.includes("SELECT contact_phone FROM whatsapp_chats WHERE id = ? AND user_id = ?")) {
           return [[mockChatRow], []];
+        }
+        if (query.includes("SELECT id, title, category, body, variables, active FROM message_templates")) {
+          return [[mockTemplateRow], []];
         }
         return [[], []];
       }),
@@ -105,6 +117,7 @@ vi.mock("../infrastructure/providers/WahaService.js", () => {
         stopSession: vi.fn().mockResolvedValue(undefined),
         getQrCode: vi.fn().mockResolvedValue("data:image/png;base64,mockqr"),
         sendText: vi.fn().mockResolvedValue({ wahaMessageId: "waha_msg_123" }),
+        sendFile: vi.fn().mockResolvedValue({ wahaMessageId: "waha_file_msg_456" }),
         syncSessionStatusToDb: vi.fn().mockResolvedValue(undefined)
       };
     })
@@ -251,7 +264,6 @@ describe("WhatsApp Service Transport endpoints & Webhook Receiver tests", () => 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("success");
       
-      // Verify chat thread creation and message archiving queries were run
       expect(pool.execute).toHaveBeenCalled();
     });
   });
@@ -293,7 +305,7 @@ describe("WhatsApp Service Transport endpoints & Webhook Receiver tests", () => 
       );
     });
 
-    it("POST /api/whatsapp/messages - rejects outbound texts with missing body", async () => {
+    it("POST /api/whatsapp/messages - rejects outbound texts with missing body and media", async () => {
       const res = await request(app)
         .post("/api/whatsapp/messages")
         .set("Cookie", adminCookie)
@@ -314,6 +326,51 @@ describe("WhatsApp Service Transport endpoints & Webhook Receiver tests", () => 
       expect(res.body.message.body).toBe("Sending test reply");
       
       expect(pool.execute).toHaveBeenCalled();
+    });
+  });
+
+  describe("Sprint 5 Advanced Messaging (Templates, Media Upload, sendFile)", () => {
+    it("GET /api/whatsapp/templates - lists database message templates", async () => {
+      const res = await request(app)
+        .get("/api/whatsapp/templates")
+        .set("Cookie", adminCookie);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("success");
+      expect(res.body.templates).toHaveLength(1);
+      expect(res.body.templates[0].title).toBe("/thanks");
+    });
+
+    it("POST /api/whatsapp/media/upload - rejects empty multi-file uploads key", async () => {
+      const res = await request(app)
+        .post("/api/whatsapp/media/upload")
+        .set("Cookie", adminCookie);
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain("No files uploaded");
+    });
+
+    it("POST /api/whatsapp/messages - supports sending rich media attachments", async () => {
+      const res = await request(app)
+        .post("/api/whatsapp/messages")
+        .set("Cookie", adminCookie)
+        .send({
+          chatId: "cht_123",
+          body: "Caption for media",
+          media: [{
+            url: "http://localhost:3002/uploads/test.jpg",
+            thumbnailUrl: "http://localhost:3002/uploads/thumb_test.jpg",
+            mimeType: "image/jpeg",
+            filename: "test.jpg",
+            filesize: 5000,
+            checksum: "mock_checksum"
+          }]
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("success");
+      expect(res.body.message.body).toBe("Caption for media");
+      expect(res.body.message.media).toHaveLength(1);
     });
   });
 });

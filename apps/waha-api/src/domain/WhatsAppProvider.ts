@@ -4,4 +4,5 @@ export interface WhatsAppProvider {
   stopSession(sessionName: string): Promise<void>;
   getQrCode(sessionName: string): Promise<string | null>;
   sendText(sessionName: string, toPhone: string, text: string): Promise<{ wahaMessageId: string }>;
+  sendFile(sessionName: string, toPhone: string, fileUrl: string, filename: string, caption?: string): Promise<{ wahaMessageId: string }>;
 }

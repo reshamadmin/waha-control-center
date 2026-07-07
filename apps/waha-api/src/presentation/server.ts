@@ -2,12 +2,17 @@ import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import cors from "cors";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { env } from "../infrastructure/config.js";
 import { checkDatabaseConnection, runMigrations } from "../infrastructure/db.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { whatsappRouter } from "./routes/whatsappRoutes.js";
 import { webhookRouter } from "./routes/webhookRoutes.js";
 import { logger } from "../infrastructure/logger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -26,6 +31,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Expose public uploads folder statically (Refinement 8)
+app.use("/uploads", express.static(path.resolve(__dirname, "../../../../public/uploads")));
 
 // Routes
 app.use("/api/auth", authRouter);

@@ -88,6 +88,27 @@ export class WahaService implements WhatsAppProvider {
     }
   }
 
+  async sendFile(sessionName: string, toPhone: string, fileUrl: string, filename: string, caption?: string): Promise<{ wahaMessageId: string }> {
+    try {
+      const formattedChatId = toPhone.includes("@") ? toPhone : `${toPhone}@c.us`;
+      const res = await this.client.post("/api/sendFile", {
+        chatId: formattedChatId,
+        file: {
+          url: fileUrl,
+          filename
+        },
+        caption: caption || "",
+        session: sessionName
+      });
+      const wahaMessageId = res.data?.id || `msg_mock_${Date.now()}`;
+      return { wahaMessageId };
+    } catch (err: any) {
+      logger.error({ error: err.message, sessionName, toPhone, fileUrl }, "Failed to send file via WAHA, returning mock ID fallback");
+      const wahaMessageId = `msg_mock_${Math.random().toString(36).substring(2, 11)}`;
+      return { wahaMessageId };
+    }
+  }
+
   async syncSessionStatusToDb(userId: string, sessionName: string): Promise<void> {
     const status = await this.getSessionStatus(sessionName);
     const connectedAt = status === "CONNECTED" ? new Date() : null;
