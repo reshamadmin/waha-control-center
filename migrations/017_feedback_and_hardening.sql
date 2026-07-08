@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS `system_logs` (
-  `id` VARCHAR(36) PRIMARY KEY,
+  `id` VARCHAR(50) PRIMARY KEY,
   `level` ENUM('INFO', 'WARN', 'ERROR', 'FATAL') NOT NULL DEFAULT 'INFO',
   `source` ENUM('API', 'Worker', 'WAHA', 'AI') NOT NULL DEFAULT 'API',
   `request_id` VARCHAR(36) DEFAULT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `system_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `app_feedback` (
-  `id` VARCHAR(36) PRIMARY KEY,
+  `id` VARCHAR(50) PRIMARY KEY,
   `page` VARCHAR(255) NOT NULL,
   `conversation_id` VARCHAR(36) DEFAULT NULL,
   `browser` TEXT NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `app_feedback` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `system_metrics_history` (
-  `id` VARCHAR(36) PRIMARY KEY,
+  `id` VARCHAR(50) PRIMARY KEY,
   `messages_sent_count` INT DEFAULT 0,
   `ai_requests_count` INT DEFAULT 0,
   `avg_latency_ms` INT DEFAULT 0,
