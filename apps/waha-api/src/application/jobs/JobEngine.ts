@@ -26,6 +26,13 @@ export class JobEngine {
 
   start() {
     logger.info({ workerId: this.workerId }, "👷 Starting Job Engine background polling worker...");
+    // Log worker start
+    const logId = `log_${crypto.randomUUID()}`;
+    pool.execute(
+      `INSERT INTO system_logs (id, level, source, message) 
+       VALUES (?, 'INFO', 'Worker', '👷 Starting Job Engine background polling worker...')`,
+      [logId]
+    );
     // Poll the database queue every 3 seconds
     this.pollingTimer = setInterval(() => this.processNextJob(), 3000);
   }
@@ -34,6 +41,13 @@ export class JobEngine {
     if (this.pollingTimer) {
       clearInterval(this.pollingTimer);
       logger.info({ workerId: this.workerId }, "👷 Job Engine stopped.");
+      // Log worker stop
+      const logId = `log_${crypto.randomUUID()}`;
+      pool.execute(
+        `INSERT INTO system_logs (id, level, source, message) 
+         VALUES (?, 'INFO', 'Worker', '👷 Job Engine background worker stopped.')`,
+        [logId]
+      );
     }
   }
 
@@ -266,10 +280,33 @@ export class JobEngine {
         );
         logger.info({ campaignId: job.broadcast_id }, "🎉 Campaign broadcast completed all dispatches");
 
+        // Log campaign completion
+        const completionLogId = `log_${crypto.randomUUID()}`;
+        await pool.execute(
+          `INSERT INTO system_logs (id, level, source, campaign_id, message) 
+           VALUES (?, 'INFO', 'Worker', ?, '🎉 Campaign completed all dispatches successfully')`,
+          [completionLogId, job.broadcast_id]
+        );
+
+        // Push completed notification alert
+        io.emit("system.notification", {
+          type: "success",
+          title: "Broadcast completed",
+          message: `Campaign "${job.title || 'Broadcast'}" has successfully finished sending all queued messages.`
+        });
+
         io.emit("campaign.completed", progressEventPayload);
       } else {
         io.emit("campaign.progress", progressEventPayload);
       }
+
+      // Record metrics snapshot history
+      const metricId = `mtr_${crypto.randomUUID()}`;
+      await pool.execute(
+        `INSERT INTO system_metrics_history (id, messages_sent_count, ai_requests_count, avg_latency_ms, queue_depth)
+         VALUES (?, ?, 0, ?, ?)`,
+        [metricId, this.metrics.messages_sent, this.metrics.average_send_time, this.metrics.queue_depth]
+      );
 
       io.emit("queue.updated", { queueDepth: this.metrics.queue_depth });
 

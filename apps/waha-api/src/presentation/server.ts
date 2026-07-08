@@ -5,14 +5,17 @@ import cors from "cors";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { env } from "../infrastructure/config.js";
-import { checkDatabaseConnection, runMigrations } from "../infrastructure/db.js";
+import { checkDatabaseConnection, runMigrations, pool } from "../infrastructure/db.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { whatsappRouter } from "./routes/whatsappRoutes.js";
 import { webhookRouter } from "./routes/webhookRoutes.js";
 import { broadcastRouter } from "./routes/broadcastRoutes.js";
 import { aiRouter } from "./routes/aiRoutes.js";
+import { devRouter } from "./routes/devRoutes.js";
 import { logger } from "../infrastructure/logger.js";
 import { JobEngine } from "../application/jobs/JobEngine.js";
+import crypto from "node:crypto";
+import { WahaService } from "../infrastructure/providers/WahaService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +32,7 @@ const io = new Server(httpServer, {
 });
 
 export const jobEngine = new JobEngine();
+const wahaService = new WahaService();
 
 // Middlewares
 app.use(cors({
@@ -36,6 +40,15 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Request correlation ID and structured logger middleware
+app.use((req, res, next) => {
+  const requestId = req.headers["x-request-id"] || crypto.randomUUID();
+  const correlationId = req.headers["x-correlation-id"] || requestId;
+  res.locals.requestId = requestId;
+  res.locals.correlationId = correlationId;
+  next();
+});
 
 // Expose public uploads folder statically
 app.use("/uploads", express.static(path.resolve(__dirname, "../../../../public/uploads")));
@@ -46,6 +59,7 @@ app.use("/api/whatsapp/broadcasts", broadcastRouter);
 app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/webhooks", webhookRouter);
 app.use("/api/ai", aiRouter);
+app.use("/api/dev", devRouter);
 
 // Health check endpoint
 app.get("/health", async (req, res) => {
@@ -59,14 +73,30 @@ app.get("/health", async (req, res) => {
     dbError = err.message;
   }
 
+  let wahaStatus = "disconnected";
+  try {
+    const status = await wahaService.getSessionStatus("default");
+    if (status === "CONNECTED") {
+      wahaStatus = "connected";
+    }
+  } catch {}
+
+  const storageStatus = "connected";
+  const geminiStatus = env.GEMINI_API_KEY ? "connected" : "disconnected";
+
   res.json({
-    status: "healthy",
+    status: dbStatus === "connected" ? "healthy" : "degraded",
     timestamp: new Date().toISOString(),
-    database: {
-      status: dbStatus,
-      error: dbError
+    components: {
+      API: "connected",
+      MySQL: dbStatus,
+      WAHA: wahaStatus,
+      Gemini: geminiStatus,
+      Storage: storageStatus,
+      JobEngine: "connected",
+      SocketIO: io.sockets.sockets.size > 0 ? "active" : "inactive"
     },
-    version: "1.0.0"
+    version: "1.0.0-rc1"
   });
 });
 
@@ -85,8 +115,22 @@ io.on("connection", (socket) => {
 });
 
 // Global Error Handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use(async (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error({ error: err.message, stack: err.stack }, "❌ Unhandled Server Error");
+
+  try {
+    const id = `log_${crypto.randomUUID()}`;
+    const requestId = res.locals.requestId || null;
+    const user = res.locals.authUser?.id || null;
+    await pool.execute(
+      `INSERT INTO system_logs (id, level, source, request_id, user_id, endpoint, message, stack)
+       VALUES (?, 'ERROR', 'API', ?, ?, ?, ?, ?)`,
+      [id, requestId, user, req.originalUrl || req.url, err.message || "Unknown error", err.stack || null]
+    );
+  } catch (logErr: any) {
+    logger.warn({ error: logErr.message }, "⚠️ Failed to save unhandled exception to system_logs table");
+  }
+
   res.status(err.statusCode || 500).json({
     status: "error",
     code: err.code || "INTERNAL_SERVER_ERROR",

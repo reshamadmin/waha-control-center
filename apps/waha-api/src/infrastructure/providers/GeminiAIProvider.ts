@@ -44,6 +44,14 @@ export class GeminiAIProvider implements AIProvider {
       logger.error({ error: err.message, requestType }, "❌ Gemini AI Provider execution failed");
       
       // Log failed request details too with 0 tokens
+      const logId = `log_${crypto.randomUUID()}`;
+      try {
+        await pool.execute(
+          `INSERT INTO system_logs (id, level, source, message, stack) 
+           VALUES (?, 'ERROR', 'AI', ?, ?)`,
+          [logId, `Gemini AI Provider execution failed: ${err.message}`, err.stack || null]
+        );
+      } catch {}
       await this.logUsage(requestType, 0, 0, latency, 0.0);
       throw err;
     }

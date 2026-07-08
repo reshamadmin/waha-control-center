@@ -3,6 +3,7 @@ import { Login } from "../features/auth/Login.js";
 import { PersonaSelection } from "../features/auth/PersonaSelection.js";
 import { WahaSettings } from "../features/settings/WahaSettings.js";
 import { AiSettings } from "../features/settings/AiSettings.js";
+import { DeveloperConsole } from "../features/developer/DeveloperConsole.js";
 import { CrmInbox } from "../features/crm/CrmInbox.js";
 import { CrmBroadcasts } from "../features/crm/CrmBroadcasts.js";
 import { ProtectedRoute } from "./ProtectedRoute.js";
@@ -36,7 +37,8 @@ export const router = createBrowserRouter([
         children: [
           { path: "settings/profile", element: <SettingsProfilePlaceholder /> },
           { path: "settings/waha", element: <WahaSettings /> },
-          { path: "settings/ai", element: <AiSettings /> }
+          { path: "settings/ai", element: <AiSettings /> },
+          { path: "developer", element: <DeveloperConsole /> }
         ]
       }
     ]

@@ -32,7 +32,7 @@ describe("Express Server Standalone Workspace tests", () => {
     const res = await request(app).get("/health");
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("healthy");
-    expect(res.body.database.status).toBe("connected");
-    expect(res.body.database.error).toBeNull();
+    expect(res.body.components.API).toBe("connected");
+    expect(res.body.components.MySQL).toBe("connected");
   });
 });

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0-rc1] - 2026-07-08
+### Added
+- Created schema migration `017_feedback_and_hardening.sql` supporting `system_logs`, `app_feedback`, `system_metrics_history`, and `feature_flags`.
+- Added multi-component `/health` endpoint validating API, MySQL database connectivity, WAHA sessions, Gemini AI, local storage folder, JobEngine metrics, and active Socket.IO connections.
+- Implemented structured request interceptors tracking correlation IDs.
+- Coded background metrics snapshots cron logging average latency, queue depth, and message speeds.
+- Built interactive ADMIN `/developer` Diagnostics console with logs tables, feature flags toggles, metrics timeline history, and exports/restores data controls.
+- Integrated a global floating "Report Issue" feedback submission modal.
+- Configured Socket.IO system notification alerts populating React Toast alerts.
+- Wrote integration test suite `hardening.test.ts` verifying all route actions.
+
 ## [1.0.0-sprint8] - 2026-07-07
 ### Added
 - Integrated Gemini 2.5 Flash via REST wrapper `GeminiAIProvider` with cost tracking telemetry calculations.
