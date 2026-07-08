@@ -12,6 +12,7 @@ RUN npm ci --workspace @waha-control-center/waha-api
 
 # Copy actual source code
 COPY apps/waha-api ./apps/waha-api
+COPY migrations ./migrations
 
 # Build typescript project
 RUN npm run build --workspace @waha-control-center/waha-api
