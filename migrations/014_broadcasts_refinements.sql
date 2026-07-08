@@ -7,5 +7,4 @@ ALTER TABLE `broadcasts`
 ALTER TABLE `broadcast_queue`
   MODIFY COLUMN `status` VARCHAR(30) NOT NULL DEFAULT 'pending',
   ADD COLUMN `variables` TEXT DEFAULT NULL,
-  ADD COLUMN `error_message` TEXT DEFAULT NULL,
-  ADD COLUMN `retry_count` INT NOT NULL DEFAULT 0;
+  ADD COLUMN `error_message` TEXT DEFAULT NULL;
