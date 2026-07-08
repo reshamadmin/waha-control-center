@@ -17,7 +17,7 @@ import {
   Info
 } from "lucide-react";
 
-axios.defaults.baseURL = "http://localhost:3002";
+axios.defaults.baseURL = (import.meta as any).env?.VITE_API_URL || "http://localhost:3002";
 axios.defaults.withCredentials = true;
 
 interface Campaign {

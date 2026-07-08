@@ -2,7 +2,7 @@ import { create } from "zustand";
 import axios from "axios";
 
 // Configure axios base settings for backend APIs
-axios.defaults.baseURL = "http://localhost:3002";
+axios.defaults.baseURL = (import.meta as any).env?.VITE_API_URL || "http://localhost:3002";
 axios.defaults.withCredentials = true;
 
 export type UserRole = "ADMIN" | "USER" | "CXO";
