@@ -1,11 +1,10 @@
-ALTER TABLE \`broadcasts\`
-  MODIFY COLUMN \`status\` VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
-  ADD COLUMN \`scheduled_at\` TIMESTAMP NULL DEFAULT NULL,
-  ADD COLUMN \`sending_rules\` TEXT DEFAULT NULL,
-  ADD COLUMN \`media_attachments\` TEXT DEFAULT NULL;
+ALTER TABLE `broadcasts`
+  MODIFY COLUMN `status` VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
+  ADD COLUMN `scheduled_at` TIMESTAMP NULL DEFAULT NULL,
+  ADD COLUMN `sending_rules` TEXT DEFAULT NULL,
+  ADD COLUMN `media_attachments` TEXT DEFAULT NULL;
 
-ALTER TABLE \`broadcast_queue\`
-  MODIFY COLUMN \`status\` VARCHAR(30) NOT NULL DEFAULT 'pending',
-  ADD COLUMN \`variables\` TEXT DEFAULT NULL,
-  ADD COLUMN \`error_message\` TEXT DEFAULT NULL,
-  ADD COLUMN \`retry_count\` INT NOT NULL DEFAULT 0;
+ALTER TABLE `broadcast_queue`
+  MODIFY COLUMN `status` VARCHAR(30) NOT NULL DEFAULT 'pending',
+  ADD COLUMN `variables` TEXT DEFAULT NULL,
+  ADD COLUMN `error_message` TEXT DEFAULT NULL;

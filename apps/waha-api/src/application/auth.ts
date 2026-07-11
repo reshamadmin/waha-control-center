@@ -24,12 +24,30 @@ const COOKIE_OPTIONS = {
   maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
 };
 
+import { timingSafeEqual } from "node:crypto";
+
+function safelyCompare(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left, "utf8");
+  const rightBuffer = Buffer.from(right, "utf8");
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+  return timingSafeEqual(leftBuffer, rightBuffer);
+}
+
 export async function hashPassword(password: string): Promise<string> {
   return bcryptjs.hash(password, 10);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcryptjs.compare(password, hash);
+  if (hash.startsWith("$2a$") || hash.startsWith("$2b$") || hash.startsWith("$2y$")) {
+    try {
+      return await bcryptjs.compare(password, hash);
+    } catch {
+      return false;
+    }
+  }
+  return safelyCompare(password, hash);
 }
 
 export function generateToken(payload: JwtPayload): string {

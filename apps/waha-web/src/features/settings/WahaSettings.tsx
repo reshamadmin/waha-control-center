@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
 
-axios.defaults.baseURL = "http://localhost:3002";
+axios.defaults.baseURL = (import.meta as any).env?.VITE_API_URL || "http://localhost:3002";
 axios.defaults.withCredentials = true;
 
 export const WahaSettings = () => {
