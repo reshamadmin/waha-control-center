@@ -7,6 +7,7 @@ vi.hoisted(() => {
   process.env.SESSION_SECRET = "superSecretSessionKeyBypassLengthCheckConstraint";
   process.env.GEMINI_API_KEY = "dummyGeminiApiKey";
   process.env.ENCRYPTION_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "dummySupabaseKey";
 });
 
 // Mock database pool executions directly
@@ -49,8 +50,38 @@ vi.mock("../infrastructure/db.js", () => {
   };
 });
 
+vi.mock("../infrastructure/repositories/UserRepository.js", () => {
+  return {
+    UserRepository: vi.fn().mockImplementation(() => {
+      const mockUserRow = {
+        id: "usr_admin_default",
+        name: "Resham Sutra Admin",
+        email: "admin@reshamsutra.com",
+        passwordHash: "$2b$10$5jhdPgWK9jUPI9Zyp.fKSuxuydwwEKamM0ywPRR4OcuzsbGzerYyS", // Correct Bcrypt hash of 'admin123'
+        role: "ADMIN",
+        defaultPersona: "CRM",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      return {
+        findByEmail: vi.fn().mockImplementation(async (email: string) => {
+          if (email === "admin@reshamsutra.com") return mockUserRow;
+          return null;
+        }),
+        findById: vi.fn().mockImplementation(async (id: string) => {
+          if (id === "usr_admin_default") return mockUserRow;
+          return null;
+        })
+      };
+    })
+  };
+});
+
 import { app } from "../server.js";
 import { hashPassword, verifyPassword } from "../application/auth.js";
+
+import crypto from "node:crypto";
+import bcryptjs from "bcryptjs";
 
 describe("Authentication Services & Routes integration tests", () => {
   describe("Password Hashing Functions", () => {
@@ -60,6 +91,23 @@ describe("Authentication Services & Routes integration tests", () => {
       
       expect(await verifyPassword(password, hash)).toBe(true);
       expect(await verifyPassword("differentPassword", hash)).toBe(false);
+    });
+
+    it("successfully verifies legacy raw SHA-256 hashes", async () => {
+      const password = "legacyPassword123";
+      const rawSha256 = crypto.createHash("sha256").update(password).digest("hex");
+
+      expect(await verifyPassword(password, rawSha256)).toBe(true);
+      expect(await verifyPassword("differentPassword", rawSha256)).toBe(false);
+    });
+
+    it("successfully verifies legacy SHA-256 hashes upgraded to bcrypt", async () => {
+      const password = "upgradedPassword123";
+      const rawSha256 = crypto.createHash("sha256").update(password).digest("hex");
+      const bcryptOfSha256 = await bcryptjs.hash(rawSha256, 10);
+
+      expect(await verifyPassword(password, bcryptOfSha256)).toBe(true);
+      expect(await verifyPassword("differentPassword", bcryptOfSha256)).toBe(false);
     });
   });
 

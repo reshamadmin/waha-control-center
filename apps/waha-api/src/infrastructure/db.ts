@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 import { env } from "./config.js";
 import { logger } from "./logger.js";
 
+import bcryptjs from "bcryptjs";
+import axios from "axios";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -22,6 +25,65 @@ export async function checkDatabaseConnection(): Promise<void> {
     await connection.ping();
   } finally {
     connection.release();
+  }
+}
+
+export async function upgradeLegacyHashes(connection: mysql.PoolConnection): Promise<void> {
+  logger.info("⚙️ Checking for legacy SHA-256 password hashes to upgrade...");
+  
+  // 1. Check local MySQL users table
+  try {
+    const [users] = await connection.execute<any[]>("SELECT id, password_hash FROM users");
+    for (const user of users) {
+      const hash = user.password_hash;
+      // Detect 64-char hexadecimal string (SHA-256)
+      if (hash && /^[0-9a-fA-F]{64}$/.test(hash)) {
+        const bcryptHash = await bcryptjs.hash(hash, 10);
+        await connection.execute("UPDATE users SET password_hash = ? WHERE id = ?", [bcryptHash, user.id]);
+        logger.info({ userId: user.id }, "✅ Upgraded legacy SHA-256 password hash to bcrypt in MySQL");
+      }
+    }
+  } catch (err: any) {
+    logger.debug({ error: err.message }, "Local MySQL users table check skipped or failed");
+  }
+
+  // 2. Check Supabase users table
+  if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const response = await axios.get(
+        `${env.SUPABASE_URL}/rest/v1/users?select=id,password_hash`,
+        {
+          headers: {
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+          }
+        }
+      );
+      const supabaseUsers = response.data;
+      if (Array.isArray(supabaseUsers)) {
+        for (const user of supabaseUsers) {
+          const hash = user.password_hash;
+          if (hash && /^[0-9a-fA-F]{64}$/.test(hash)) {
+            const bcryptHash = await bcryptjs.hash(hash, 10);
+            await axios.patch(
+              `${env.SUPABASE_URL}/rest/v1/users?id=eq.${encodeURIComponent(user.id)}`,
+              { password_hash: bcryptHash },
+              {
+                headers: {
+                  apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+                  Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+                  "Content-Type": "application/json",
+                  Prefer: "return=representation"
+                }
+              }
+            );
+            logger.info({ userId: user.id }, "✅ Upgraded legacy SHA-256 password hash to bcrypt in Supabase");
+          }
+        }
+      }
+    } catch (err: any) {
+      logger.error({ error: err.message }, "❌ Failed to check or upgrade legacy SHA-256 password hashes in Supabase");
+    }
   }
 }
 
@@ -66,6 +128,9 @@ export async function runMigrations(): Promise<void> {
         throw err;
       }
     }
+
+    // 5. Run startup password hash upgrades
+    await upgradeLegacyHashes(connection);
   } catch (err) {
     logger.error({ error: err }, "❌ Migration runner encountered a fatal error");
     throw err;

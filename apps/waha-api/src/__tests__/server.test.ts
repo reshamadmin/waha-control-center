@@ -7,6 +7,7 @@ vi.hoisted(() => {
   process.env.SESSION_SECRET = "superSecretSessionKeyBypassLengthCheckConstraint";
   process.env.GEMINI_API_KEY = "dummyGeminiApiKey";
   process.env.ENCRYPTION_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "dummySupabaseKey";
 });
 
 // Mock the database pool and connection module in infrastructure
@@ -17,6 +18,17 @@ vi.mock("../infrastructure/db.js", () => ({
   },
   checkDatabaseConnection: vi.fn().mockResolvedValue(undefined)
 }));
+
+vi.mock("../infrastructure/repositories/UserRepository.js", () => {
+  return {
+    UserRepository: vi.fn().mockImplementation(() => {
+      return {
+        findByEmail: vi.fn().mockResolvedValue(null),
+        findById: vi.fn().mockResolvedValue(null)
+      };
+    })
+  };
+});
 
 // Now safely import the server app
 import { app } from "../server.js";

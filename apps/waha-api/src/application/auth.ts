@@ -24,12 +24,45 @@ const COOKIE_OPTIONS = {
   maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
 };
 
+import { timingSafeEqual } from "node:crypto";
+
+function safelyCompare(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left, "utf8");
+  const rightBuffer = Buffer.from(right, "utf8");
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+  return timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+import crypto from "node:crypto";
+
 export async function hashPassword(password: string): Promise<string> {
   return bcryptjs.hash(password, 10);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcryptjs.compare(password, hash);
+  if (hash.startsWith("$2a$") || hash.startsWith("$2b$") || hash.startsWith("$2y$")) {
+    try {
+      // 1. Direct standard bcrypt comparison
+      const directMatch = await bcryptjs.compare(password, hash);
+      if (directMatch) return true;
+
+      // 2. Legacy SHA-256 upgraded to bcrypt comparison
+      const sha256Hash = crypto.createHash("sha256").update(password).digest("hex");
+      return await bcryptjs.compare(sha256Hash, hash);
+    } catch {
+      return false;
+    }
+  }
+  
+  // 3. Timing-safe plaintext fallback comparison
+  const plaintextMatch = safelyCompare(password, hash);
+  if (plaintextMatch) return true;
+
+  // 4. Timing-safe raw SHA-256 fallback comparison (in case not yet upgraded at startup)
+  const sha256Hash = crypto.createHash("sha256").update(password).digest("hex");
+  return safelyCompare(sha256Hash, hash);
 }
 
 export function generateToken(payload: JwtPayload): string {

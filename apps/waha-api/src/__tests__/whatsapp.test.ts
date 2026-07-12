@@ -8,6 +8,7 @@ vi.hoisted(() => {
   process.env.SESSION_SECRET = "superSecretSessionKeyBypassLengthCheckConstraint";
   process.env.GEMINI_API_KEY = "dummyGeminiApiKey";
   process.env.ENCRYPTION_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "dummySupabaseKey";
 });
 
 // Mock database pool directly inside the hoisted factory
@@ -119,6 +120,45 @@ vi.mock("../infrastructure/providers/WahaService.js", () => {
         sendText: vi.fn().mockResolvedValue({ wahaMessageId: "waha_msg_123" }),
         sendFile: vi.fn().mockResolvedValue({ wahaMessageId: "waha_file_msg_456" }),
         syncSessionStatusToDb: vi.fn().mockResolvedValue(undefined)
+      };
+    })
+  };
+});
+
+vi.mock("../infrastructure/repositories/UserRepository.js", () => {
+  return {
+    UserRepository: vi.fn().mockImplementation(() => {
+      const mockAdminUser = {
+        id: "usr_admin_default",
+        name: "Resham Sutra Admin",
+        email: "admin@reshamsutra.com",
+        passwordHash: "$2b$10$5jhdPgWK9jUPI9Zyp.fKSuxuydwwEKamM0ywPRR4OcuzsbGzerYyS",
+        role: "ADMIN",
+        defaultPersona: "CRM",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      const mockNormalUser = {
+        id: "usr_normal_default",
+        name: "Resham Sutra User",
+        email: "user@reshamsutra.com",
+        passwordHash: "$2b$10$5jhdPgWK9jUPI9Zyp.fKSuxuydwwEKamM0ywPRR4OcuzsbGzerYyS",
+        role: "USER",
+        defaultPersona: "CRM",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      return {
+        findByEmail: vi.fn().mockImplementation(async (email: string) => {
+          if (email === "admin@reshamsutra.com") return mockAdminUser;
+          if (email === "user@reshamsutra.com") return mockNormalUser;
+          return null;
+        }),
+        findById: vi.fn().mockImplementation(async (id: string) => {
+          if (id === "usr_admin_default") return mockAdminUser;
+          if (id === "usr_normal_default") return mockNormalUser;
+          return null;
+        })
       };
     })
   };
